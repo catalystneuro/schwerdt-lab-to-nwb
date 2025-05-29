@@ -24,7 +24,7 @@ Repository="https://github.com/catalystneuro/schwerdt-lab-to-nwb"
 
 [project.optional-dependencies]
 choi_2025 = [
-  "neuroconv==0.7.0"   # Pinned dependencies to specific versions
+  "neuroconv==0.7.4"   # Pinned dependencies to specific versions
 ]
 
 [build-system]
@@ -40,7 +40,7 @@ include = ["*"]
 
 [tool.black]
 line-length = 120
-target-version = ['py39', 'py310', 'py311']
+target-version = ['py310', 'py311']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
