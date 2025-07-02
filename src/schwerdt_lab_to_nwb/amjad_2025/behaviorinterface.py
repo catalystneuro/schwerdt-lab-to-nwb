@@ -6,7 +6,7 @@ from pynwb.file import NWBFile
 
 
 class Choi2025BehaviorInterface(BaseDataInterface):
-    """Behavior interface for choi_2025 conversion"""
+    """Behavior interface for amjad_2025 conversion"""
 
     keywords = ["behavior"]
 

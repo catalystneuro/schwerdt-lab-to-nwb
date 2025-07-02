@@ -6,7 +6,7 @@ from neuroconv.datainterfaces import (
     SpikeGLXRecordingInterface,
 )
 
-from schwerdt_lab_to_nwb.choi_2025 import Choi2025BehaviorInterface
+from schwerdt_lab_to_nwb.amjad_2025 import Choi2025BehaviorInterface
 
 
 class Choi2025NWBConverter(NWBConverter):

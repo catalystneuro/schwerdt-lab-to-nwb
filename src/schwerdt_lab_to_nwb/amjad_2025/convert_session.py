@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 
-from schwerdt_lab_to_nwb.choi_2025 import Choi2025NWBConverter
+from schwerdt_lab_to_nwb.amjad_2025 import Choi2025NWBConverter
 
 
 def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, Path], stub_test: bool = False):

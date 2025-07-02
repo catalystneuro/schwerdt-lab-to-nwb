@@ -1,0 +1,38 @@
+NWBFile:
+  keywords:
+    - fast-scan cyclic voltammetry
+    - micro-invasive neural implant
+    - dopamine recording
+    - striatum
+  related_publications:
+    - https://doi.org/10.1101/2025.01.30.635139
+  experiment_description:
+    This experiment contains in vivo recordings of reward- and movement-related dopamine, spikes, and local field potentials
+    obtained using single- and dual-channel shaft-assisted micro-invasive probes (s-µIPs) chronically implanted in the striatum
+    of task-performing rhesus monkeys. The s-µIPs leverage carbon fiber materials to enable dual neurochemical and electrical
+    neural activity recording at micro-invasive (10 µm) spatial footprints near the recording sites, while a wider shaft provides
+    rigidity for deep brain targeting using standard cranial chambers. These probes allow for measurements from deep brain targets
+    with minimal tissue disruption at the recording site. Recordings were made during performance of reward-biased eye movement
+    tasks, enabling simultaneous measurement of dopamine transients, spikes, and local field potentials with micrometer spatial
+    resolution. Chronic implants demonstrated stable, multi-modal neural activity measurements from micro-invasive devices over
+    extended periods post-implantation.
+  session_description:
+    This session includes in vivo recordings of reward- and movement-related dopamine, spikes, and local field potentials
+    obtained using single- and dual-channel micro-invasive neural implants (s-µIPs) chronically implanted in the striatum
+    of task-performing rhesus monkeys. Recordings were made during performance of reward-biased eye movement tasks,
+    enabling simultaneous measurement of neurochemical and electrophysiological activity associated with behavior.
+  institution: University of Pittsburgh
+  lab: Schwerdt
+  experimenter:
+    - Schwerdt, Helen N.
+    - Amjad, Usamma
+  protocol:
+    - https://doi.org/10.17504/protocols.io.kqdg32b91v25/v1
+    - https://doi.org/10.17504/protocols.io.x54v92wd4l3e/v1
+    - https://doi.org/10.17504/protocols.io.bp2l62m95gqe/v1
+Subject:
+  species: Macaca mulatta
+  description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
+  age: P8Y  # TODO: replace placeholder value (in ISO 8601, such as "P8Y" (example: 8 years))
+  sex: F
+  # date_of_birth: TBD  # Actual date not specified in methods

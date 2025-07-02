@@ -23,8 +23,8 @@ dependencies = [
 Repository="https://github.com/catalystneuro/schwerdt-lab-to-nwb"
 
 [project.optional-dependencies]
-choi_2025 = [
-  "neuroconv==0.7.0"   # Pinned dependencies to specific versions
+amjad_2025 = [
+  "neuroconv==0.7.5"   # Pinned dependencies to specific versions
 ]
 
 [build-system]
