@@ -58,7 +58,7 @@ def session_to_nwb(
     # source_data.update(dict(Behavior=dict()))
     # conversion_options.update(dict(Behavior=dict()))
 
-    converter = Amjad2025NWBConverter(source_data=source_data)
+    converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
