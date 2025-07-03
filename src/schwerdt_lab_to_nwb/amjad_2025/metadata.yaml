@@ -26,10 +26,7 @@ NWBFile:
   experimenter:
     - Schwerdt, Helen N.
     - Amjad, Usamma
-  protocol:
-    - https://doi.org/10.17504/protocols.io.kqdg32b91v25/v1
-    - https://doi.org/10.17504/protocols.io.x54v92wd4l3e/v1
-    - https://doi.org/10.17504/protocols.io.bp2l62m95gqe/v1
+  protocol: https://doi.org/10.17504/protocols.io.kqdg32b91v25/v1, https://doi.org/10.17504/protocols.io.x54v92wd4l3e/v1, https://doi.org/10.17504/protocols.io.bp2l62m95gqe/v1
 Subject:
   species: Macaca mulatta
   description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
