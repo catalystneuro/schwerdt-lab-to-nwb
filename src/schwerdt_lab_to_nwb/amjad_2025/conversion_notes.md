@@ -47,3 +47,10 @@ Spikes
 
 ### Behavioral data
 - `09262024_trlist.mat` - Behavioral data with each row corresponding to a trial in the session.
+
+### Session start time
+
+All timestamps in the NWB file are represented as relative times (in seconds) from the session start time.
+The session start time is set to the time when the Neuralynx system began recording, which is
+`2024-09-26 09:01:38.000000` in the example session. The timestamp of the first trial (from `09262024_trlist.mat`)
+is `2024-09-26 12:37:27.53965`, which corresponds to a relative time of `12949.053965` seconds after the session start.
