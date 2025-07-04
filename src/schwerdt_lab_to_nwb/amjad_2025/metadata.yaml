@@ -33,3 +33,16 @@ Subject:
   age: P8Y  # TODO: replace placeholder value (in ISO 8601, such as "P8Y" (example: 8 years))
   sex: F
   # date_of_birth: TBD  # Actual date not specified in methods
+
+Ecephys:
+  Device:
+    - name: device_ecephys
+      description: Neuralynx recording
+  ElectrodeGroup:
+    - name: ElectrodeGroup
+      description: The group of electrodes from the EPhys system (Neuralynx, Digital Lynx SX) implanted in the striatum.
+      location: CN #  TODO: confirm with lab
+      device: device_ecephys
+  electrical_series:
+    name: electrical_series
+    description: The raw acquisition traces from Neuralynx (Digital Lynx SX) acquired with a unity-gain headstage (Neuralynx, HS-36, ±1 mV input range, at 30 or 32 kHz).
