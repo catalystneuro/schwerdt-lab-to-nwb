@@ -53,10 +53,13 @@ def session_to_nwb(
     # Add Sorting
     # source_data.update(dict(Sorting=dict()))
     # conversion_options.update(dict(Sorting=dict()))
-    #
-    # # Add Behavior
-    # source_data.update(dict(Behavior=dict()))
-    # conversion_options.update(dict(Behavior=dict()))
+
+    # Add Behavior
+    trlist_file_paths = list(session_folder_path.glob("*trlist*.mat"))
+    if len(trlist_file_paths) == 1:
+        trlist_file_path = trlist_file_paths[0]
+        source_data.update(dict(Behavior=dict(file_path=trlist_file_path, trials_key="trlist")))
+        conversion_options.update(dict(Behavior=dict(stub_test=False)))
 
     converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
 
@@ -107,3 +110,4 @@ if __name__ == "__main__":
         nwbfile = io.read()
         assert len(nwbfile.devices) == 1, "Expected one device in the NWB file."
         assert len(nwbfile.electrode_groups) == 1, "Expected one electrode group in the NWB file."
+        print(nwbfile.trials[:].head())
