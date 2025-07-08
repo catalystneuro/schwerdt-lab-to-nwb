@@ -13,19 +13,56 @@ from schwerdt_lab_to_nwb.utils import (
 
 
 class TrialsInterface(BaseDataInterface):
-    """ """
+    """
+    Data interface for adding trial information to an NWBFile from MATLAB .mat files.
+
+    This interface reads trial data (e.g., start/stop times, trial types) from a .mat file and adds it to the NWBFile
+    in the standard trials table. The .mat file must contain a key (default: 'trlist') with a dictionary that includes
+    at least a 'ts' (timestamps) array and a 'type' array for trial tags.
+
+    Parameters
+    ----------
+    file_path : FilePath
+        Path to the .mat file containing trial data.
+    trials_key : str
+        Key in the .mat file dictionary that contains the trial data.
+    verbose : bool, optional
+        Whether to print verbose output during processing.
+    """
 
     keywords = ("behavior",)
 
     def __init__(self, file_path: FilePath, trials_key: str, verbose: bool = False):
-        """Initialize the TrialsInterface."""
+        """
+        Initialize the TrialsInterface.
+
+        Parameters
+        ----------
+        file_path : FilePath
+            Path to the .mat file containing trial data.
+        trials_key : str
+            Key in the .mat file dictionary that contains the trial data.
+        verbose : bool, optional
+            Whether to print verbose output during processing.
+        """
         super().__init__(file_path=file_path, trials_key=trials_key)
         self.verbose = verbose
 
     def read_data(self) -> dict:
         """
-        Reads the trials data from the specified file path.
-        This method should be overridden in subclasses to implement specific reading logic.
+        Reads the trials data from the specified .mat file.
+
+        Returns
+        -------
+        dict
+            Dictionary containing trial data, typically with keys like 'ts' (timestamps) and 'type' (trial tags).
+
+        Raises
+        ------
+        ValueError
+            If the file format is not supported.
+        KeyError
+            If the specified trials_key is not found in the .mat file.
         """
         file_path = Path(self.source_data["file_path"])
         file_path_suffix = file_path.suffix.lower()
@@ -47,6 +84,17 @@ class TrialsInterface(BaseDataInterface):
         ----------
         nwbfile : NWBFile
             The NWB file to which the trials data will be added.
+        metadata : dict
+            Metadata dictionary containing at least the NWBFile session start time.
+        stub_test : bool, optional
+            If True, only a subset of trials will be added for testing.
+
+        Raises
+        ------
+        ValueError
+            If no trials data is found.
+        KeyError
+            If the trials data does not contain a 'ts' key.
         """
         trials_data = self.read_data()
         if not trials_data:
@@ -80,4 +128,16 @@ class TrialsInterface(BaseDataInterface):
             )
 
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict | None, stub_test: bool = False) -> None:
+        """
+        Adds the trials data to the NWB file using the standard NeuroConv interface.
+
+        Parameters
+        ----------
+        nwbfile : NWBFile
+            The NWB file to which the trials data will be added.
+        metadata : dict or None
+            Metadata dictionary for the NWB file.
+        stub_test : bool, optional
+            If True, only a subset of trials will be added for testing.
+        """
         self.add_trials_to_nwbfile(nwbfile=nwbfile, metadata=metadata, stub_test=stub_test)
