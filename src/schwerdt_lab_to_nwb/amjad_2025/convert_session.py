@@ -4,6 +4,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from neuroconv.utils import dict_deep_update, load_dict_from_file
+from numpy.testing import assert_array_equal
 from pydantic import DirectoryPath
 
 from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
@@ -12,6 +13,7 @@ from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
 def session_to_nwb(
     session_folder_path: DirectoryPath,
     nwb_folder_path: DirectoryPath,
+    channel_name_to_brain_area: dict[str, str] | None = None,
     stub_test: bool = False,
     verbose: bool = False,
 ):
@@ -27,6 +29,8 @@ def session_to_nwb(
     nwb_folder_path : DirectoryPath
         The directory path where the converted NWB file will be saved.
         The file will be named 'sub-{subject_id}_ses-{session_id}.nwb'.
+    channel_name_to_brain_area : dict[str, str] | None, optional
+        A dictionary mapping channel names to brain areas.
     stub_test : bool, optional
         Whether to run conversion in stub test mode (not implemented), by default False.
     verbose : bool, optional
@@ -80,6 +84,25 @@ def session_to_nwb(
     metadata["Subject"]["subject_id"] = subject_id
     metadata["NWBFile"]["session_id"] = session_id
 
+    if channel_name_to_brain_area is not None:
+        # Get the recording extractor from the interface
+        recording_interface = converter.data_interface_objects["Recording"]
+        recording_extractor = recording_interface.recording_extractor
+
+        channel_ids = recording_interface.channel_ids
+        brain_areas = [
+            channel_name_to_brain_area.get(
+                recording_extractor.get_channel_property(channel_id=channel_id, key="channel_name"), "unknown"
+            )
+            for channel_id in channel_ids
+        ]
+
+        recording_extractor.set_property(
+            key="brain_area",
+            values=brain_areas,
+            ids=channel_ids,
+        )
+
     # Run conversion
     converter.run_conversion(
         metadata=metadata,
@@ -96,7 +119,18 @@ if __name__ == "__main__":
     output_dir_path = Path("/Users/weian/data/Schwerdt/nwbfiles")
     stub_test = True
 
-    session_to_nwb(session_folder_path=data_dir_path, nwb_folder_path=output_dir_path, stub_test=stub_test)
+    # Define brain areas for each channel using a dictionary
+    channel_name_to_brain_area = {
+        "CSC37": "c3bs",
+        "CSC38": "c3a",
+    }
+
+    session_to_nwb(
+        session_folder_path=data_dir_path,
+        nwb_folder_path=output_dir_path,
+        channel_name_to_brain_area=channel_name_to_brain_area,
+        stub_test=stub_test,
+    )
 
     # Debugging output TODO: remove before finalizing
     print(f"Conversion completed. NWB file saved to: {output_dir_path}")
@@ -111,3 +145,9 @@ if __name__ == "__main__":
         assert len(nwbfile.devices) == 1, "Expected one device in the NWB file."
         assert len(nwbfile.electrode_groups) == 1, "Expected one electrode group in the NWB file."
         print(nwbfile.trials[:].head())
+        assert "location" in nwbfile.electrodes.colnames, "Expected 'location' column in electrodes table."
+        print(nwbfile.electrodes[:].head())
+        # check that the brain area is set correctly
+        assert_array_equal(
+            nwbfile.electrodes["location"][:], ["c3bs", "c3a"]
+        ), "Expected brain areas to match the provided dictionary."
