@@ -29,8 +29,8 @@ to 7500 Hz. This system also recorded timestamps of identified task events using
 systems were synchronized by transmitting uniform “trial-start” event codes to both systems, as detailed in previous work.
 
 LFP
-- `CSC37.ncs` - Raw LFP signals from site c3bs, sampled at 32 kHz, recorded using Neuralynx system.
-- `CSC38.ncs` - Raw LFP signals from site c3a, sampled at 32 kHz, recorded using Neuralynx system.
+- `CSC37.ncs` - Raw signals from site c3bs, sampled at 32 kHz, recorded using Neuralynx system.
+- `CSC38.ncs` - Raw signals from site c3a, sampled at 32 kHz, recorded using Neuralynx system.
 - `09262024_tr_nlx_c3bs-c3a.mat` - Processed LFP signals from site c3bs with respect to c3a, sampled at 1000 Hz, aligned to the initial cue start. (30 second mark aligns to initial cue start).
 Spikes
 - `cl3_session126_csc12_100_spikes.mat` - This is the EPhys captured and thresholded spike data from sites ??. Each row contains the initial time stamp for the waveform, the unit ID, followed by the detected waveform samples (48 points long sampled at 32 kHz).
