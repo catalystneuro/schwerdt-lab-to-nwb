@@ -1,7 +1,9 @@
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
 from neuroconv.basedatainterface import BaseDataInterface
+from neuroconv.tools import get_module
 from pydantic import FilePath
 from pymatreader import read_mat
 from pynwb import NWBFile
@@ -127,7 +129,77 @@ class TrialsInterface(BaseDataInterface):
                 check_ragged=False,
             )
 
-    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict | None, stub_test: bool = False) -> None:
+    def add_events(
+        self, nwbfile: NWBFile, metadata: dict | None = None, event_mapping: dict | None = None, stub_test: bool = False
+    ) -> None:
+        """
+        Adds event data to the NWB file using an AnnotatedEventsTable.
+
+        Parameters
+        ----------
+        nwbfile : NWBFile
+            The NWB file to which the event data will be added.
+        metadata : dict or None
+            Metadata dictionary for the NWB file, which should include session start time.
+        event_mapping : dict or None
+            Mapping of event types to labels for the AnnotatedEventsTable.
+            If None, uses the trial list's 'NlxEventTTL' codes as labels.
+        """
+        from ndx_events import AnnotatedEventsTable
+
+        annotated_events_metadata = metadata["Events"]["AnnotatedEventsTable"]
+        annotated_events = AnnotatedEventsTable(
+            name=annotated_events_metadata["name"],
+            description=annotated_events_metadata["description"],
+        )
+        session_start_time = None
+        if "session_start_time" in metadata["NWBFile"]:
+            session_start_time = metadata["NWBFile"]["session_start_time"]
+
+        trials_data = self.read_data()
+        if "NlxEventTS" not in trials_data or "NlxEventTTL" not in trials_data:
+            raise KeyError(
+                "The trials data must contain 'NlxEventTS' and 'NlxEventTTL' keys for event timestamps and types."
+            )
+        unix_event_times = trials_data["NlxEventTS"]
+        event_types = trials_data["NlxEventTTL"]  # this is per trial
+        if stub_test:
+            # Limit the number of trials for stub testing
+            num_trials = min(len(trials_data["NlxEventTS"]), 100)
+            unix_event_times = unix_event_times[:num_trials]
+            event_types = event_types[:num_trials]
+
+        # Collect all event times for each event type across all trials
+        event_type_to_times = defaultdict(list)
+
+        for unix_event_times_per_trial, event_types_per_trial in zip(unix_event_times, event_types):
+            trial_event_times = convert_unix_timestamps_to_datetime(timestamps=unix_event_times_per_trial)
+            relative_event_times = convert_timestamps_to_relative_timestamps(
+                timestamps=trial_event_times, start_time=session_start_time
+            )
+            for event_type, relative_event_time in zip(event_types_per_trial, relative_event_times):
+                event_type_to_times[event_type].append(relative_event_time)
+
+        # Add grouped event times to the AnnotatedEventsTable
+        for event_type, times in event_type_to_times.items():
+            label = event_mapping.get(event_type, event_type) if event_mapping else event_type
+            annotated_events.add_event_type(
+                label=str(label),
+                event_description=f"The event times for code '{event_type}'.",
+                event_times=times,
+                check_ragged=False,
+            )
+
+        events_module = get_module(nwbfile, name="events", description="Contains processed event data from Neuralynx.")
+        events_module.add(annotated_events)
+
+    def add_to_nwbfile(
+        self,
+        nwbfile: NWBFile,
+        metadata: dict | None,
+        event_mapping: dict | None = None,
+        stub_test: bool = False,
+    ) -> None:
         """
         Adds the trials data to the NWB file using the standard NeuroConv interface.
 
@@ -137,7 +209,11 @@ class TrialsInterface(BaseDataInterface):
             The NWB file to which the trials data will be added.
         metadata : dict or None
             Metadata dictionary for the NWB file.
+        event_mapping : dict or None
+            Mapping of event types to labels for the AnnotatedEventsTable.
+            If None, uses the trlist.NlxEventTTL codes as labels.
         stub_test : bool, optional
             If True, only a subset of trials will be added for testing.
         """
+        self.add_events(nwbfile=nwbfile, metadata=metadata, event_mapping=event_mapping, stub_test=stub_test)
         self.add_trials_to_nwbfile(nwbfile=nwbfile, metadata=metadata, stub_test=stub_test)
