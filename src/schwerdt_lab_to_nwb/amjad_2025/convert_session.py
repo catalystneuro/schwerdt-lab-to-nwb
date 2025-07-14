@@ -68,9 +68,12 @@ def session_to_nwb(
         trlist_file_path = trlist_file_paths[0]
         source_data.update(dict(Behavior=dict(file_path=trlist_file_path, trials_key="trlist")))
         if ttl_code_to_event_name is not None:
-            conversion_options.update(dict(Behavior=dict(event_mapping=ttl_code_to_event_name, stub_test=False)))
+            conversion_options.update(dict(Behavior=dict(event_mapping=ttl_code_to_event_name, stub_test=stub_test)))
         else:
-            conversion_options.update(dict(Behavior=dict(stub_test=stub_test)))
+            raise ValueError(
+                f"TTL code to event name mapping is required when '{trlist_file_path}' is specified. "
+                "Please provide this mapping using the 'event_mapping' argument."
+            )
 
     converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
 
