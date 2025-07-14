@@ -46,7 +46,14 @@ Spikes
 - `FSCV_trlists_c8dg_09132024_firsthalf.mat` - Processed FSCV data, aligned to behavioral events, fscv contains processed (PCA extracted) signals from the site name that is mentioned in fscvnames (c8dg). eventmap contains information about what each behavioral code in trlist.NlxEventTTL means.
 
 ### Behavioral data
-- `09262024_trlist.mat` - Behavioral data with each row corresponding to a trial in the session.
+
+- `09262024_trlist.mat` - Contains behavioral data for each trial in the session. The file includes:
+  - `ts`: An array of timestamps for the start of each trial.
+  - `type`: An array of trial types or tags.
+  - `NlxEventTS`: Nested arrays of event timestamps for each trial.
+  - `NlxEventTTL`: Nested arrays of event codes for each trial, which can be mapped to event names using `eventmap`.
+
+This data is used to populate the NWB file's trials table and events table. The trials table includes start and stop times for each trial, while the events table contains detailed event information aligned to the trials.
 
 ### Session start time
 
