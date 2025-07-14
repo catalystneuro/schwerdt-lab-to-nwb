@@ -17,16 +17,22 @@ from schwerdt_lab_to_nwb.utils import (
 
 class TrialsInterface(BaseDataInterface):
     """
-    Data interface for adding trial information to an NWBFile from MATLAB .mat files.
+    Data interface for adding trial and event information to an NWBFile from MATLAB .mat files.
 
-    This interface reads trial data (e.g., start/stop times, trial types) from a .mat file and adds it to the NWBFile
-    in the standard trials table. The .mat file must contain a key (default: 'trlist') with a dictionary that includes
-    at least a 'ts' (timestamps) array and a 'type' array for trial tags.
+    This interface reads trial data (e.g., start/stop times, trial types) and event data (e.g., timestamps, event codes)
+    from a .mat file and adds them to the NWBFile. Trial data is added to the standard trials table, while event data
+    is added using an AnnotatedEventsTable.
+
+    The .mat file must contain a key (default: 'trlist') with a dictionary that includes at least:
+    - 'ts': an array of timestamps for trials.
+    - 'type': an array of trial tags.
+    - 'NlxEventTS': nested arrays of event timestamps per trial.
+    - 'NlxEventTTL': nested arrays of event codes per trial.
 
     Parameters
     ----------
     file_path : FilePath
-        Path to the .mat file containing trial data.
+        Path to the .mat file containing trial and event data.
     trials_key : str
         Key in the .mat file dictionary that contains the trial data.
     verbose : bool, optional
@@ -130,7 +136,7 @@ class TrialsInterface(BaseDataInterface):
                 check_ragged=False,
             )
 
-    def add_events(
+    def add_events_to_nwbfile(
         self,
         nwbfile: NWBFile,
         event_mapping: dict,
@@ -148,6 +154,8 @@ class TrialsInterface(BaseDataInterface):
             Mapping of event codes to labels for the AnnotatedEventsTable.
         metadata : dict or None
             Metadata dictionary for the NWB file, which should include session start time.
+        stub_test : bool, optional
+            If True, only a subset of events will be added for testing.
         """
         from ndx_events import AnnotatedEventsTable
 
@@ -208,18 +216,18 @@ class TrialsInterface(BaseDataInterface):
         stub_test: bool = False,
     ) -> None:
         """
-        Adds the trials data to the NWB file using the standard NeuroConv interface.
+        Adds trials and events data to the NWB file.
 
         Parameters
         ----------
         nwbfile : NWBFile
-            The NWB file to which the trials data will be added.
+            The NWB file to which the trials and events data will be added.
         event_mapping : dict
             Mapping of event codes to labels for the AnnotatedEventsTable.
         metadata : dict or None
-            Metadata dictionary for the NWB file.
+            Metadata dictionary for the NWB file, which should include session start time.
         stub_test : bool, optional
-            If True, only a subset of trials will be added for testing.
+            If True, only a subset of trials and events will be added for testing.
         """
-        self.add_events(nwbfile=nwbfile, metadata=metadata, event_mapping=event_mapping, stub_test=stub_test)
+        self.add_events_to_nwbfile(nwbfile=nwbfile, metadata=metadata, event_mapping=event_mapping, stub_test=stub_test)
         self.add_trials_to_nwbfile(nwbfile=nwbfile, metadata=metadata, stub_test=stub_test)
