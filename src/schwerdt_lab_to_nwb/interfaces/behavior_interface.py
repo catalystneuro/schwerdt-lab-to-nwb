@@ -15,7 +15,7 @@ from schwerdt_lab_to_nwb.utils import (
 )
 
 
-class TrialsInterface(BaseDataInterface):
+class BehaviorInterface(BaseDataInterface):
     """
     Data interface for adding trial and event information to an NWBFile from MATLAB .mat files.
 
@@ -43,7 +43,7 @@ class TrialsInterface(BaseDataInterface):
 
     def __init__(self, file_path: FilePath, trials_key: str, verbose: bool = False):
         """
-        Initialize the TrialsInterface.
+        Initialize the BehaviorInterface.
 
         Parameters
         ----------
