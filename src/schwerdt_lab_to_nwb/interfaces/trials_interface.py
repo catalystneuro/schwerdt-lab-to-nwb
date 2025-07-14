@@ -1,5 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
+from warnings import warn
 
 import numpy as np
 from neuroconv.basedatainterface import BaseDataInterface
@@ -130,7 +131,11 @@ class TrialsInterface(BaseDataInterface):
             )
 
     def add_events(
-        self, nwbfile: NWBFile, metadata: dict | None = None, event_mapping: dict | None = None, stub_test: bool = False
+        self,
+        nwbfile: NWBFile,
+        event_mapping: dict,
+        metadata: dict | None = None,
+        stub_test: bool = False,
     ) -> None:
         """
         Adds event data to the NWB file using an AnnotatedEventsTable.
@@ -139,11 +144,10 @@ class TrialsInterface(BaseDataInterface):
         ----------
         nwbfile : NWBFile
             The NWB file to which the event data will be added.
+        event_mapping : dict
+            Mapping of event codes to labels for the AnnotatedEventsTable.
         metadata : dict or None
             Metadata dictionary for the NWB file, which should include session start time.
-        event_mapping : dict or None
-            Mapping of event types to labels for the AnnotatedEventsTable.
-            If None, uses the trial list's 'NlxEventTTL' codes as labels.
         """
         from ndx_events import AnnotatedEventsTable
 
@@ -182,7 +186,10 @@ class TrialsInterface(BaseDataInterface):
 
         # Add grouped event times to the AnnotatedEventsTable
         for event_type, times in event_type_to_times.items():
-            label = event_mapping.get(event_type, event_type) if event_mapping else event_type
+            label = event_mapping.get(event_type, None)
+            if label is None:
+                warn(f"Event code '{event_type}' not found in the event mapping. Event will not be added.")
+                continue
             annotated_events.add_event_type(
                 label=str(label),
                 event_description=f"The event times for code '{event_type}'.",
@@ -196,8 +203,8 @@ class TrialsInterface(BaseDataInterface):
     def add_to_nwbfile(
         self,
         nwbfile: NWBFile,
+        event_mapping: dict,
         metadata: dict | None,
-        event_mapping: dict | None = None,
         stub_test: bool = False,
     ) -> None:
         """
@@ -207,11 +214,10 @@ class TrialsInterface(BaseDataInterface):
         ----------
         nwbfile : NWBFile
             The NWB file to which the trials data will be added.
+        event_mapping : dict
+            Mapping of event codes to labels for the AnnotatedEventsTable.
         metadata : dict or None
             Metadata dictionary for the NWB file.
-        event_mapping : dict or None
-            Mapping of event types to labels for the AnnotatedEventsTable.
-            If None, uses the trlist.NlxEventTTL codes as labels.
         stub_test : bool, optional
             If True, only a subset of trials will be added for testing.
         """
