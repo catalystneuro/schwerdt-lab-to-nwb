@@ -133,9 +133,9 @@ if __name__ == "__main__":
     }
 
     # TODO: Extract this from file when available
-    # 40, 41, 0 missing from trlists.eventmap
+    # 40, 41, 0 missing from trlists.eventmap can be skipped
     event_code_dict = {
-        9: "start trial",
+        # 9: "start trial", code 9 can be skipped
         12: "frame skipped",
         14: "manual reward",
         18: "end trial",
