@@ -46,3 +46,6 @@ Ecephys:
   electrical_series:
     name: electrical_series
     description: The raw acquisition traces from Neuralynx (Digital Lynx SX) acquired with a unity-gain headstage (Neuralynx, HS-36, ±1 mV input range, at 30 or 32 kHz).
+#  lfp_series:
+#    name: lfp_series
+#    description: Local field potentials (LFPs) acquired from the Neuralynx system (Digital Lynx SX) at 1 kHz.
