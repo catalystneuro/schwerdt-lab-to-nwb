@@ -1,1 +1,2 @@
-from .trials_interface import TrialsInterface
+from .lfp_interface import NlxLfpRecordingInterface as NlxLfpRecordingInterface
+from .trials_interface import TrialsInterface as TrialsInterface
