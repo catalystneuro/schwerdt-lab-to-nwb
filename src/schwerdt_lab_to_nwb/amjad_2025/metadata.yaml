@@ -49,3 +49,9 @@ Ecephys:
 #  lfp_series:
 #    name: lfp_series
 #    description: Local field potentials (LFPs) acquired from the Neuralynx system (Digital Lynx SX) at 1 kHz.
+
+Events:
+  AnnotatedEventsTable:
+    name: events_table
+    description: |
+      This table contains the events related to the task performance, including timestamps for task initiation, reward delivery, and other significant behavioral events.
