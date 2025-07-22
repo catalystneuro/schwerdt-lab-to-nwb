@@ -1,1 +1,5 @@
-from .trials_interface import TrialsInterface
+from .behavior_interface import BehaviorInterface
+
+__all__ = [
+    "BehaviorInterface",
+]
