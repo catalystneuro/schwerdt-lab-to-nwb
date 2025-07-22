@@ -58,6 +58,13 @@ def session_to_nwb(
     source_data.update(dict(Recording=dict(folder_path=session_folder_path, es_key="electrical_series")))
     conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
 
+    # Add LFP
+    lfp_file_paths = list(session_folder_path.glob("*tr_nlx*.mat"))
+    if len(lfp_file_paths) == 1:
+        lfp_file_path = lfp_file_paths[0]
+        source_data.update(dict(LFP=dict(file_path=lfp_file_path, trials_key="tr_nlx", sampling_frequency=1000.0)))
+        conversion_options.update(dict(LFP=dict(stub_test=stub_test)))
+
     # Add Sorting
     # source_data.update(dict(Sorting=dict()))
     # conversion_options.update(dict(Sorting=dict()))
