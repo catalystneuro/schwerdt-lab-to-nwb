@@ -18,7 +18,7 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         file_path: FilePath,
         trials_key: str,
         sampling_frequency: float = 1000.0,
-        es_key: str = "differential_lfp_series",
+        es_key: str = "lfp_series",
         verbose: bool = False,
     ):
         """
@@ -33,7 +33,7 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         sampling_frequency : float, optional
             Sampling frequency of the LFP data in Hz. Default is 1000.0 Hz.
         es_key : str, optional
-            Key for the electrical series in the NWB file. Default is "differential_lfp_series".
+            Key for the electrical series in the NWB file. Default is "lfp_series".
         verbose : bool, optional
             Whether to print verbose output during processing.
         """
