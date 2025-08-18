@@ -143,7 +143,10 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         return lfp_list_from_mat[trials_key]
 
     def reconstruct_continuous_signal_from_trials(
-        self, trial_start_times: list[float], time_offset: float = 30.0
+        self,
+        trial_start_times: list[float],
+        time_offset: float = 30.0,
+        stub_test: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Reconstruct a continuous signal and its timestamps from segmented trial data.
@@ -157,6 +160,8 @@ class NlxLfpRecordingInterface(BaseDataInterface):
             List of trial start times (in seconds).
         time_offset : float, optional
             Time (in seconds) subtracted from each trial start time to align the timestamps. Default is 30.0.
+        stub_test : bool, optional
+            If True, only a subset of trials will be processed for testing purposes. Default is False
 
         Returns
         -------
@@ -165,6 +170,10 @@ class NlxLfpRecordingInterface(BaseDataInterface):
             continuous_signal: 1D array of the reconstructed continuous signal.
         """
         lfp_per_trial = self.read_data()
+        num_trials = len(lfp_per_trial)
+        if stub_test:
+            num_trials = min(num_trials, 100)
+        lfp_per_trial = lfp_per_trial[:num_trials]
 
         fs = self.source_data["sampling_frequency"]
         num_samples_per_trial = len(lfp_per_trial[0])
@@ -220,7 +229,7 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         timestamps, lfp_traces = self.reconstruct_continuous_signal_from_trials(
             trial_start_times=trial_start_times,
             time_offset=time_offset,
-            # stub_q
+            stub_test=stub_test,
         )
         if lfp_traces.ndim == 1:
             # If lfp_traces is 1D, reshape it to 2D with one channel
@@ -235,18 +244,21 @@ class NlxLfpRecordingInterface(BaseDataInterface):
             lfp_file_path=Path(self.source_data["file_path"]),
             electrode_locations=electrode_locations,
         )
-        lfp_channel_ids = [channel_id]
         lfp_electrodes = nwbfile.electrodes.create_region(
             name="electrodes",
-            region=lfp_channel_ids,
+            region=[channel_id],
             description="LFP electrodes table region",
         )
         raw_electrical_series = nwbfile.acquisition["electrical_series"]
         lfp_metadata = metadata["Ecephys"][self.es_key]
 
+        default_description = lfp_metadata["description"]
+        new_description = (
+            default_description + f" site {electrode_locations[0]} with respect to {electrode_locations[1]}."
+        )
         lfp_electrical_series = ElectricalSeries(
             name=lfp_metadata["name"],
-            description=f"Differential LFP signals from site {electrode_locations[0]} with respect to {electrode_locations[1]}.",
+            description=new_description,
             data=lfp_traces,
             electrodes=lfp_electrodes,
             timestamps=timestamps,
