@@ -13,6 +13,7 @@ from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
 def session_to_nwb(
     session_folder_path: DirectoryPath,
     nwb_folder_path: DirectoryPath,
+    subject_key: str,
     channel_name_to_brain_area: dict[str, str] | None = None,
     ttl_code_to_event_name: dict[int, str] | None = None,
     stub_test: bool = False,
@@ -30,6 +31,8 @@ def session_to_nwb(
     nwb_folder_path : DirectoryPath
         The directory path where the converted NWB file will be saved.
         The file will be named 'sub-{subject_id}_ses-{session_id}.nwb'.
+    subject_key : str
+        The subject key to look for in the metadata under 'Subjects' section (e.g. "Monkey T", "Monkey P").
     channel_name_to_brain_area : dict[str, str] | None, optional
         A dictionary mapping channel names to brain areas.
         If provided, the brain area will be set for each channel in the NWB file.
@@ -47,9 +50,6 @@ def session_to_nwb(
     if stub_test:
         nwb_folder_path = nwb_folder_path / "nwb_stub"
     nwb_folder_path.mkdir(parents=True, exist_ok=True)
-
-    subject_id = str(session_folder_path.parent.name).replace(" ", "-")
-    nwbfile_path = nwb_folder_path / f"sub-{subject_id}_ses-{session_id}.nwb"
 
     source_data = dict()
     conversion_options = dict()
@@ -91,7 +91,14 @@ def session_to_nwb(
     # Update the ecephys metadata
     metadata["Ecephys"] = editable_metadata["Ecephys"]
 
-    metadata["Subject"]["subject_id"] = subject_id
+    subject_metadata = metadata["Subjects"].get(subject_key, None)
+    if subject_metadata is None:
+        raise ValueError(
+            f"Subject '{subject_key}' is not found in the metadata. "
+            f"Please add an entry for this subject to '{editable_metadata_path}' under the 'Subjects' section."
+        )
+    metadata["Subject"] = subject_metadata
+
     metadata["NWBFile"]["session_id"] = session_id
 
     if channel_name_to_brain_area is not None:
@@ -112,6 +119,9 @@ def session_to_nwb(
             values=brain_areas,
             ids=channel_ids,
         )
+
+    subject_id = subject_metadata["subject_id"].replace(" ", "-")
+    nwbfile_path = nwb_folder_path / f"sub-{subject_id}_ses-{session_id}.nwb"
 
     # Run conversion
     converter.run_conversion(
@@ -201,6 +211,7 @@ if __name__ == "__main__":
     session_to_nwb(
         session_folder_path=data_dir_path,
         nwb_folder_path=output_dir_path,
+        subject_key="Monkey T",
         channel_name_to_brain_area=channel_name_to_brain_area,
         ttl_code_to_event_name=event_code_dict,
         stub_test=stub_test,
