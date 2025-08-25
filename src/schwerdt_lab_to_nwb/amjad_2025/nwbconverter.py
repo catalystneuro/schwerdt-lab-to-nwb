@@ -6,7 +6,7 @@ from neuroconv.datainterfaces import (
     PlexonSortingInterface,
 )
 
-from schwerdt_lab_to_nwb.interfaces import BehaviorInterface
+from schwerdt_lab_to_nwb.interfaces import BehaviorInterface, NlxLfpRecordingInterface
 
 
 class Amjad2025NWBConverter(NWBConverter):
@@ -16,4 +16,5 @@ class Amjad2025NWBConverter(NWBConverter):
         Recording=NeuralynxRecordingInterface,
         Sorting=PlexonSortingInterface,
         Behavior=BehaviorInterface,
+        LFP=NlxLfpRecordingInterface,
     )
