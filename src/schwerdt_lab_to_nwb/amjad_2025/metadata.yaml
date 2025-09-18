@@ -63,3 +63,21 @@ Events:
     name: events_table
     description: |
       This table contains the events related to the task performance, including timestamps for task initiation, reward delivery, and other significant behavioral events.
+
+FSCVAnalysis:
+  module:
+    name: FSCVAnalysis
+    description: This module contains the results of the Fast-Scan Cyclic Voltammetry (FSCV) analysis, including dopamine concentration time series and related signals.
+  TimeSeries:
+    - name: da
+      description: PCA extracted dopamine concentration time series.
+      unit: n.a. # TODO: confirm with lab
+    - name: ph
+      description: PH change time series.
+      unit: n.a. # TODO: confirm with lab
+    - name: m
+      description: Motion artifact time series.
+      unit: n.a. # TODO: confirm with lab
+    - name: iox
+      description: Measured oxidation current at 0.6 V (approximate voltage at which dopamine oxidizes).
+      unit: n.a. # TODO: confirm with lab
