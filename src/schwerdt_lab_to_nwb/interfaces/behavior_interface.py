@@ -81,6 +81,9 @@ class BehaviorInterface(BaseDataInterface):
         trials_list_from_mat = read_mat(file_path)
         trials_key = self.source_data.get("trials_key", "trlist")
         if trials_key not in trials_list_from_mat:
+            # TODO: how to handle this more gracefully?
+            if "trlists" in trials_list_from_mat:
+                return trials_list_from_mat["trlists"]["trlist"]
             raise KeyError(f"Key '{trials_key}' not found in the .mat file.")
 
         return trials_list_from_mat[trials_key]
@@ -128,12 +131,18 @@ class BehaviorInterface(BaseDataInterface):
         relative_stop_times = relative_start_times[1:] + [np.nan]
 
         trial_types = trials_data["type"][:num_trials]
+
+        timeseries = None
+        if "FSCVAnalysis" in nwbfile.processing:
+            timeseries = list(nwbfile.processing["FSCVAnalysis"].data_interfaces.values())
+
         for start_time, stop_time, tag in zip(relative_start_times, relative_stop_times, trial_types):
             nwbfile.add_trial(
                 start_time=start_time,
                 stop_time=stop_time,
                 tags=tag,
                 check_ragged=False,
+                timeseries=timeseries,
             )
 
     def add_events_to_nwbfile(
