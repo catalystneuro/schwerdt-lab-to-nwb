@@ -8,6 +8,7 @@ from numpy.testing import assert_array_equal
 from pydantic import DirectoryPath
 
 from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
+from schwerdt_lab_to_nwb.utils import fetch_relative_fscv_start_times_from_trlist
 
 
 def session_to_nwb(
@@ -81,12 +82,35 @@ def session_to_nwb(
                 f"TTL code to event name mapping is required when '{trlist_file_path}' is specified. "
                 "Please provide this mapping using the 'event_mapping' argument."
             )
+    else:
+        raise ValueError(f"Expected one trlist file in '{session_folder_path}', found {len(trlist_file_paths)}.")
+
+    # Add TrialAlignedFSCV
+    fscv_file_paths = list(session_folder_path.glob("*fscv*.mat"))
+    if len(fscv_file_paths) == 1:
+        fscv_file_path = fscv_file_paths[0]
+        source_data.update(
+            dict(TrialAlignedFSCV=dict(file_path=fscv_file_path, trials_key="c8ds_fscv", sampling_frequency=10.0))
+        )
 
     converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
 
-    # Add datetime to conversion
+    # Fetch metadata from converter
     metadata = converter.get_metadata()
     session_start_time = metadata["NWBFile"]["session_start_time"]
+
+    aligned_starting_times = fetch_relative_fscv_start_times_from_trlist(
+        file_path=trlist_file_path,
+        trlist_key="trlist",
+        time_column_index=3,
+        session_start_time=session_start_time,
+    )
+
+    conversion_options.update(
+        dict(TrialAlignedFSCV=dict(stub_test=stub_test, aligned_starting_times=aligned_starting_times))
+    )
+
+    # Add datetime to conversion
     session_start_time = session_start_time.replace(tzinfo=ZoneInfo("America/New_York"))
     metadata["NWBFile"].update(session_start_time=session_start_time)
 
