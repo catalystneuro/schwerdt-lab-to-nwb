@@ -1,5 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
+from typing import List
 from warnings import warn
 
 import numpy as np
@@ -56,6 +57,8 @@ class BehaviorInterface(BaseDataInterface):
         """
         super().__init__(file_path=file_path, trials_key=trials_key)
         self.verbose = verbose
+        # Internal storage for aligned trial start times
+        self._aligned_start_times = None
 
     def read_data(self) -> dict:
         """
@@ -84,6 +87,17 @@ class BehaviorInterface(BaseDataInterface):
             raise KeyError(f"Key '{trials_key}' not found in the .mat file.")
 
         return trials_list_from_mat[trials_key]
+
+    def set_aligned_trial_start_times(self, aligned_start_times: List[float]) -> None:
+        """
+        Sets the trial start times to an externally provided list of aligned start times.
+
+        Parameters
+        ----------
+        aligned_start_times : list of UNIX timestamps
+            List of aligned trial start times as UNIX timestamps.
+        """
+        self._aligned_start_times = aligned_start_times
 
     def add_trials_to_nwbfile(self, nwbfile: NWBFile, metadata: dict, stub_test: bool = False) -> None:
         """
@@ -117,6 +131,11 @@ class BehaviorInterface(BaseDataInterface):
             num_trials = min(num_trials, 100)
 
         unix_timestamps_from_matlab = trials_data["ts"][:num_trials]
+
+        if self._aligned_start_times is not None:
+            if len(self._aligned_start_times) != num_trials:
+                raise ValueError("Length of aligned_start_times does not match number of trials in the data.")
+            unix_timestamps_from_matlab = self._aligned_start_times
         start_times_dt = convert_unix_timestamps_to_datetime(unix_timestamps_from_matlab)
 
         session_start_time = None
