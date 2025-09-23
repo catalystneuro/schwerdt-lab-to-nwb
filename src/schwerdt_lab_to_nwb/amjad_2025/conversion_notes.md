@@ -61,3 +61,20 @@ All timestamps in the NWB file are represented as relative times (in seconds) fr
 The session start time is set to the time when the Neuralynx system began recording, which is
 `2024-09-26 09:01:38.000000` in the example session. The timestamp of the first trial (from `09262024_trlist.mat`)
 is `2024-09-26 12:37:27.53965`, which corresponds to a relative time of `12949.053965` seconds after the session start.
+
+## Time alignment between behavior and EPhys/FSCV
+
+To ensure that behavioral events and trial information are accurately aligned with electrophysiology (ephys) and fast-scan cyclic voltammetry (FSCV) data, we use a shared "trial-start" TTL event code recorded by both systems.
+
+**Alignment procedure:**
+1. The Neuralynx ephys system and the behavioral system both record event codes, including a unique TTL code (typically `128`) that marks the start of each trial.
+2. For each trial, the behavioral `.mat` file (`trlist`) contains arrays of event timestamps (`NlxEventTS`) and corresponding event codes (`NlxEventTTL`).
+3. During conversion, we extract the timestamp of the first occurrence of the trial-start code for each trial. These timestamps are used as the definitive aligned trial start times.
+4. The aligned trial start times are set in the `BehaviorInterface` and used to populate the NWB trials table, ensuring that all trial and event times are referenced to the same timeline as the ephys/FSCV recordings.
+5. All timestamps are converted to relative times (seconds) from the session start time, which is set to the start of the Neuralynx recording.
+
+**Code reference:**
+- The alignment logic is implemented in `Amjad2025NWBConverter.temporally_align_data_interfaces`, which finds the trial-start event in each trial and sets the aligned times in the behavior interface.
+- The `BehaviorInterface` then uses these aligned times when adding trials and events to the NWB file.
+
+This approach guarantees that behavioral, ephys, and FSCV data are temporally synchronized for downstream analysis.
