@@ -17,7 +17,7 @@ class FSCVRecordingInterface(BaseDataInterface):
     def __init__(
         self,
         file_paths: List[FilePath],
-        channel_indices: List[int] = None,
+        channel_ids_to_brain_area: dict[int, str],
         data_key: str = "recordedData",
     ):
         """
@@ -27,13 +27,14 @@ class FSCVRecordingInterface(BaseDataInterface):
         ----------
         file_paths : List[FilePath]
             List of paths to the FSCV data files.
-        channel_indices : List[int], optional
-            List of channel indices to read from the data files. If None, all channels are read. Default is None.
+        channel_ids_to_brain_area : dict[int, str]
+            Mapping of channel indices (0-based) to brain area names. The keys should correspond to the indices of
+            the channels in the FSCV data files.
         data_key : str
             Key in the .mat file dictionary that contains the FSCV data. Default is "recordedData".
         """
         super().__init__(file_paths=file_paths)
-        self.channel_indices = channel_indices if channel_indices is not None else []
+        self.channel_ids_to_brain_area = channel_ids_to_brain_area
         self.data_key = data_key
 
     def get_metadata_schema(self) -> dict:
@@ -43,10 +44,8 @@ class FSCVRecordingInterface(BaseDataInterface):
             type="object",
             required=["Device", "ElectrodeGroup", "FSCVResponseSeries", "FSCVExcitationSeries"],
             properties=dict(
-                Device=dict(type="array", minItems=1, items={"$ref": "#/properties/Ecephys/definitions/Device"}),
-                ElectrodeGroup=dict(
-                    type="array", minItems=1, items={"$ref": "#/properties/Ecephys/definitions/ElectrodeGroup"}
-                ),
+                Device=get_schema_from_hdmf_class(Device),
+                ElectrodeGroup=get_schema_from_hdmf_class(ElectrodeGroup),
                 FSCVResponseSeries=dict(
                     type="object",
                     required=["name", "description", "unit"],
@@ -91,14 +90,13 @@ class FSCVRecordingInterface(BaseDataInterface):
         metadata = super().get_metadata()
 
         metadata["FSCV"] = dict(
-            Device=[dict(name="device_fscv", description="FSCV recording")],
-            ElectrodeGroup=[
-                dict(
-                    name="FSCVElectrodeGroup",
-                    description="The group of FSCV electrodes.",
-                    device="device_fscv",
-                )
-            ],
+            Device=dict(name="device_fscv", description="FSCV recording"),
+            ElectrodeGroup=dict(
+                name="FSCVElectrodeGroup",
+                description="The group of FSCV electrodes.",
+                location="unknown",
+                device="device_fscv",
+            ),
             FSCVResponseSeries=dict(
                 name="fscv_response_series",
                 description="FSCV response current before background subtraction.",
@@ -141,7 +139,8 @@ class FSCVRecordingInterface(BaseDataInterface):
             data = mat[self.data_key]
 
             applied_voltages.append(data[:, 1])
-            channels.append(data[:, self.channel_indices])
+            channel_indices = list(self.channel_ids_to_brain_area.keys())
+            channels.append(data[:, channel_indices])
 
         excitation_series = np.concatenate(applied_voltages)
         measured_voltages = np.concatenate(channels)
@@ -168,9 +167,7 @@ class FSCVRecordingInterface(BaseDataInterface):
             times.append(data[:, 0])
         return np.concatenate(times)
 
-    def add_to_nwbfile(
-        self, nwbfile: NWBFile, metadata: dict | None, electrode_locations: List[str], conversion_factor: float
-    ) -> None:
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict, conversion_factor: float) -> None:
         """
         Adds the FSCV data to the NWB file.
 
@@ -178,10 +175,8 @@ class FSCVRecordingInterface(BaseDataInterface):
         ----------
         nwbfile : NWBFile
             The NWB file to add the data to.
-        metadata : dict, optional
+        metadata : dict
             Metadata for the FSCV data.
-        electrode_locations : List[str]
-            The recording site of each electrode.
         conversion_factor : float
             Factor to convert raw signal (V) to current (A).
         """
@@ -196,9 +191,9 @@ class FSCVRecordingInterface(BaseDataInterface):
         )
 
         # Create device and electrode group
-        device_metadata = metadata["FSCV"]["Device"][0]
+        device_metadata = metadata["FSCV"]["Device"]
         device = nwbfile.create_device(**device_metadata)
-        electrode_group_metadata = metadata["FSCV"]["ElectrodeGroup"][0]
+        electrode_group_metadata = metadata["FSCV"]["ElectrodeGroup"]
         electrode_group = nwbfile.create_electrode_group(
             name=electrode_group_metadata["name"],
             description=electrode_group_metadata["description"],
@@ -207,6 +202,7 @@ class FSCVRecordingInterface(BaseDataInterface):
         )
 
         # Add the electrodes to the NWBFile
+        electrode_locations = [self.channel_ids_to_brain_area[ch_idx] for ch_idx in self.channel_ids_to_brain_area]
         num_electrodes = len(electrode_locations)
         if (electrodes := nwbfile.electrodes) is None:
             for electrode_location in electrode_locations:
@@ -227,14 +223,12 @@ class FSCVRecordingInterface(BaseDataInterface):
                         null_values_for_properties=dict(),
                     )
                     null_values_for_rows[property] = null_value
-            new_electrode_ids = [
-                f"CH{ch_idx + 1}" for ch_idx in self.channel_indices
-            ]  # todo: whether to use matlab based indexing here
-            for electrode_id, electrode_location in zip(new_electrode_ids, electrode_locations):
+
+            for electrode_id, electrode_location in self.channel_ids_to_brain_area.items():
                 nwbfile.add_electrode(
                     group=electrode_group,
                     group_name=electrode_group_metadata["name"],
-                    channel_name=electrode_id,
+                    channel_name=str(electrode_id),
                     location=electrode_location,
                     **null_values_for_rows,
                     enforce_unique_id=True,
@@ -246,6 +240,8 @@ class FSCVRecordingInterface(BaseDataInterface):
             )
 
         response_series_metadata = metadata["FSCV"]["FSCVResponseSeries"]
+        if num_electrodes == 1:
+            response_series = response_series.flatten()
         response_series_obj = FSCVResponseSeries(
             data=response_series,
             timestamps=timestamps,
