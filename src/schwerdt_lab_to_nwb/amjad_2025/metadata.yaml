@@ -60,24 +60,24 @@ Ecephys:
 
 FSCV:
     Device:
-    - name: device_fscv
+      name: device_fscv
       description: FSCV recording device
     ElectrodeGroup:
-      - name: FSCVElectrodeGroup
-        description: The electrode group for the FSCV electrodes.
-        location: unknown # TODO: confirm with lab
-        device: device_fscv
+      name: FSCVElectrodeGroup
+      description: The electrode group for the FSCV electrodes.
+      location: unknown # TODO: confirm with lab
+      device: device_fscv
     FSCVResponseSeries:
-       name: fscv_response_series
-       description: FSCV response current before background subtraction.
-       unit: amperes
+      name: fscv_response_series
+      description: FSCV response current before background subtraction.
+      unit: amperes
     FSCVExcitationSeries:
-        name: fscv_excitation_series
-        description: FSCV excitation series for applied voltage waveform.
-        unit: volts
-        scan_frequency: 10.0 # in Hz
-        sweep_rate: 400.0 # in V/s
-        waveform_shape: Triangle
+      name: fscv_excitation_series
+      description: FSCV excitation series for applied voltage waveform.
+      unit: volts
+      scan_frequency: 10.0 # in Hz
+      sweep_rate: 400.0 # in V/s
+      waveform_shape: Triangle
 
 Events:
   AnnotatedEventsTable:
