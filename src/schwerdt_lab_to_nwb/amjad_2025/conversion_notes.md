@@ -69,12 +69,16 @@ To ensure that behavioral events and trial information are accurately aligned wi
 **Alignment procedure:**
 1. The Neuralynx ephys system and the behavioral system both record event codes, including a unique TTL code (typically `128`) that marks the start of each trial.
 2. For each trial, the behavioral `.mat` file (`trlist`) contains arrays of event timestamps (`NlxEventTS`) and corresponding event codes (`NlxEventTTL`).
-3. During conversion, we extract the timestamp of the first occurrence of the trial-start code for each trial. These timestamps are used as the definitive aligned trial start times.
+3. During conversion, for each trial, we:
+    - Find all indices in `NlxEventTTL` where the value equals the trial-start code (`128`).
+    - Use these indices to select the corresponding timestamps from `NlxEventTS` for that trial.
+    - From these candidate timestamps, select the one closest to the trial's intended start time from `trlist.ts`.
+    - This closest timestamp is used as the aligned trial start time on the EPhys/FSCV acquisition clock.
 4. The aligned trial start times are set in the `BehaviorInterface` and used to populate the NWB trials table, ensuring that all trial and event times are referenced to the same timeline as the ephys/FSCV recordings.
 5. All timestamps are converted to relative times (seconds) from the session start time, which is set to the start of the Neuralynx recording.
 
 **Code reference:**
-- The alignment logic is implemented in `Amjad2025NWBConverter.temporally_align_data_interfaces`, which finds the trial-start event in each trial and sets the aligned times in the behavior interface.
+- The alignment logic is implemented in `Amjad2025NWBConverter.temporally_align_data_interfaces`, which finds all trial-start events in each trial, then selects the timestamp closest to the intended trial start from `trlist.ts`.
 - The `BehaviorInterface` then uses these aligned times when adding trials and events to the NWB file.
 
 This approach guarantees that behavioral, ephys, and FSCV data are temporally synchronized for downstream analysis.
