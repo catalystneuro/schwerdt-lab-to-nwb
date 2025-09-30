@@ -1,5 +1,6 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 
+import re
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -68,18 +69,20 @@ def session_to_nwb(
         brain_area = fscv_channel_ids_to_brain_area[channel_indices[0]]
         file_paths = natsorted(session_folder_path.parent.rglob(f"raw*/*{brain_area}*.mat"))[:3]
         if len(file_paths):
-            channel_indices = [idx - 1 for idx in channel_indices]  # Convert to 0-based indexing
             source_data.update(
                 dict(
-                    FSCVRecording=dict(file_paths=file_paths, channel_indices=channel_indices, data_key="recordedData")
+                    FSCVRecording=dict(
+                        file_paths=file_paths,
+                        channel_ids_to_brain_area=fscv_channel_ids_to_brain_area,
+                        data_key="recordedData",
+                    )
                 )
             )
-            conversion_options.update(
-                dict(FSCVRecording=dict(electrode_locations=[brain_area], conversion_factor=1e9 / 4.99e6))
-            )
+            conversion_options.update(dict(FSCVRecording=dict(conversion_factor=1e9 / 4.99e6)))
 
     # Add LFP
-    lfp_file_paths = list(session_folder_path.glob("*tr_nlx*.mat"))
+    lfp_file_paths = list(session_folder_path.glob("*.mat"))
+    lfp_file_paths = [fp for fp in lfp_file_paths if re.match(r"tr_nlx_[a-zA-Z0-9]+-[a-zA-Z0-9]+\.mat$", fp.name)]
     if len(lfp_file_paths) == 1:
         lfp_file_path = lfp_file_paths[0]
         source_data.update(dict(LFP=dict(file_path=lfp_file_path, trials_key="tr_nlx", sampling_frequency=1000.0)))
@@ -148,7 +151,7 @@ def session_to_nwb(
         )
 
     subject_id = subject_metadata["subject_id"].replace(" ", "-")
-    nwbfile_path = nwb_folder_path / f"44sub-{subject_id}_ses-{session_id}.nwb"
+    nwbfile_path = nwb_folder_path / f"sub-{subject_id}_ses-{session_id}.nwb"
 
     # Run conversion
     converter.run_conversion(
@@ -173,10 +176,12 @@ if __name__ == "__main__":
         "CSC38": "c3a",
         "csc23": "c5d",
         "csc12": "cl3",
+        "CSC7": "c5c",
+        "CSC47": "c7b",
     }
 
     fscv_channel_ids_to_brain_area = {
-        7: "c8ds",  # Matlab based indexing (1-based)
+        6: "c8ds",  # 0-based indexing (would be channel 7 in MATLAB)
     }
 
     # TODO: Extract this from file when available
