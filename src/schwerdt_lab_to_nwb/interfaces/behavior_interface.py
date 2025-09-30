@@ -204,7 +204,7 @@ class BehaviorInterface(BaseDataInterface):
                 continue
             annotated_events.add_event_type(
                 label=str(label),
-                event_description=f"The event times for code '{event_type}'.",
+                event_description=f"The event times for code '{int(event_type)}'.",
                 event_times=times,
                 check_ragged=False,
             )
