@@ -63,3 +63,9 @@ Events:
     name: events_table
     description: |
       This table contains the events related to the task performance, including timestamps for task initiation, reward delivery, and other significant behavioral events.
+
+Behavior:
+    EyeTracking:
+        SpatialSeries:
+            name: eye_tracking_series
+            description: Eye position data (x, y) recorded from Neuralynx (Digital Lynx SX).
