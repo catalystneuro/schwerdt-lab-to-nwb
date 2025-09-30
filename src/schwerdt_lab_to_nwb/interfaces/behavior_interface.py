@@ -1,5 +1,7 @@
+import datetime
 from collections import defaultdict
 from pathlib import Path
+from typing import List
 from warnings import warn
 
 import numpy as np
@@ -56,6 +58,8 @@ class BehaviorInterface(BaseDataInterface):
         """
         super().__init__(file_path=file_path, trials_key=trials_key)
         self.verbose = verbose
+        # Internal storage for aligned trial start times
+        self._aligned_start_times = None
 
     def read_data(self) -> dict:
         """
@@ -87,7 +91,23 @@ class BehaviorInterface(BaseDataInterface):
         if trials_key not in trials_list_from_mat:
             raise KeyError(f"Key '{trials_key}' not found in the .mat file.")
 
+        required_keys = {"ts", "type", "NlxEventTS", "NlxEventTTL"}
+        if not required_keys.issubset(trials_list_from_mat[trials_key].keys()):
+            missing_keys = required_keys - set(trials_list_from_mat[trials_key].keys())
+            raise KeyError(f"The trials data is missing required keys: {missing_keys}")
+
         return trials_list_from_mat[trials_key]
+
+    def set_aligned_trial_start_times(self, aligned_start_times: List[datetime.datetime]) -> None:
+        """
+        Sets the trial start times to an externally provided list of aligned start times.
+
+        Parameters
+        ----------
+        aligned_start_times : list of datetime.datetime
+            List of aligned trial start times as datetime objects.
+        """
+        self._aligned_start_times = aligned_start_times
 
     def add_trials_to_nwbfile(self, nwbfile: NWBFile, metadata: dict, stub_test: bool = False) -> None:
         """
@@ -122,6 +142,11 @@ class BehaviorInterface(BaseDataInterface):
 
         unix_timestamps_from_matlab = trials_data["ts"][:num_trials]
         start_times_dt = convert_unix_timestamps_to_datetime(unix_timestamps_from_matlab)
+
+        if self._aligned_start_times is not None:
+            if len(self._aligned_start_times) != num_trials:
+                raise ValueError("Length of aligned_start_times does not match number of trials in the data.")
+            start_times_dt = self._aligned_start_times
 
         session_start_time = None
         if "session_start_time" in metadata["NWBFile"]:
