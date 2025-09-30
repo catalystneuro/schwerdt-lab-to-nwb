@@ -79,6 +79,10 @@ class BehaviorInterface(BaseDataInterface):
             raise ValueError(f"Unsupported file format: {file_path_suffix}. Only .mat files are supported.")
 
         trials_list_from_mat = read_mat(file_path)
+        # Common variation in file structure to account for
+        if "trlists" in trials_list_from_mat:
+            trials_list_from_mat = trials_list_from_mat["trlists"]
+
         trials_key = self.source_data.get("trials_key", "trlist")
         if trials_key not in trials_list_from_mat:
             raise KeyError(f"Key '{trials_key}' not found in the .mat file.")
