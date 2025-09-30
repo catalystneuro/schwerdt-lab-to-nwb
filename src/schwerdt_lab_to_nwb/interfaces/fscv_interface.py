@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 from ndx_fscv import FSCVExcitationSeries, FSCVResponseSeries
-from neuroconv import BaseDataInterface
+from neuroconv import BaseTemporalAlignmentInterface
 from neuroconv.tools.spikeinterface.spikeinterface import _get_null_value_for_property
 from neuroconv.utils import get_schema_from_hdmf_class
 from pydantic import FilePath
@@ -12,7 +12,7 @@ from pynwb.device import Device
 from pynwb.ecephys import ElectrodeGroup
 
 
-class FSCVRecordingInterface(BaseDataInterface):
+class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
 
     def __init__(
         self,
@@ -36,6 +36,7 @@ class FSCVRecordingInterface(BaseDataInterface):
         super().__init__(file_paths=file_paths)
         self.channel_ids_to_brain_area = channel_ids_to_brain_area
         self.data_key = data_key
+        self._timestamps = None
 
     def get_metadata_schema(self) -> dict:
         metadata_schema = super().get_metadata_schema()
@@ -167,6 +168,15 @@ class FSCVRecordingInterface(BaseDataInterface):
             times.append(data[:, 0])
         return np.concatenate(times)
 
+    def get_timestamps(self) -> np.ndarray:
+        return self._timestamps if self._timestamps is not None else self.get_original_timestamps()
+
+    def set_aligned_timestamps(self, aligned_timestamps):
+        self._timestamps = aligned_timestamps
+
+    def set_aligned_starting_time(self, aligned_starting_time: float) -> None:
+        self.set_aligned_timestamps(aligned_timestamps=self.get_timestamps() + aligned_starting_time)
+
     def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict, conversion_factor: float) -> None:
         """
         Adds the FSCV data to the NWB file.
@@ -181,7 +191,7 @@ class FSCVRecordingInterface(BaseDataInterface):
             Factor to convert raw signal (V) to current (A).
         """
         excitation_series, response_series = self.read_data(conversion_factor=conversion_factor)
-        timestamps = self.get_original_timestamps()
+        timestamps = self.get_timestamps()
 
         excitation_series_metadata = metadata["FSCV"]["FSCVExcitationSeries"]
         excitation_series_obj = FSCVExcitationSeries(
