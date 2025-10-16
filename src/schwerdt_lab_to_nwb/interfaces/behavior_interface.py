@@ -132,17 +132,12 @@ class BehaviorInterface(BaseDataInterface):
 
         trial_types = trials_data["type"][:num_trials]
 
-        timeseries = None
-        if "FSCVAnalysis" in nwbfile.processing:
-            timeseries = list(nwbfile.processing["FSCVAnalysis"].data_interfaces.values())
-
         for start_time, stop_time, tag in zip(relative_start_times, relative_stop_times, trial_types):
             nwbfile.add_trial(
                 start_time=start_time,
                 stop_time=stop_time,
                 tags=tag,
                 check_ragged=False,
-                timeseries=timeseries,
             )
 
     def add_events_to_nwbfile(
