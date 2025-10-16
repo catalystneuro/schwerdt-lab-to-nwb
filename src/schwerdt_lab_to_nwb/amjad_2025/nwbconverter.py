@@ -19,8 +19,8 @@ class Amjad2025NWBConverter(NWBConverter):
     data_interface_classes = dict(
         Recording=NeuralynxRecordingInterface,
         Sorting=PlexonSortingInterface,
-        Behavior=BehaviorInterface,
         LFP=NlxLfpRecordingInterface,
+        Behavior=BehaviorInterface,
     )
 
     def temporally_align_data_interfaces(self, metadata: dict | None = None, conversion_options: dict | None = None):
@@ -52,3 +52,6 @@ class Amjad2025NWBConverter(NWBConverter):
             aligned_trial_start_times = aligned_trial_start_times[:100]
 
         behavior_interface.set_aligned_trial_start_times(aligned_start_times=aligned_trial_start_times)
+
+        if "LFP" in self.data_interface_objects:
+            conversion_options["LFP"].update({"trial_start_times": aligned_trial_start_times})
