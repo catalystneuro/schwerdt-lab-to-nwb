@@ -147,11 +147,6 @@ class BehaviorInterface(BaseDataInterface):
                 raise ValueError("Length of aligned_start_times does not match number of trials in the data.")
             trial_midpoint_times_dt = self._aligned_start_times
 
-        if self._aligned_start_times is not None:
-            if len(self._aligned_start_times) != num_trials:
-                raise ValueError("Length of aligned_start_times does not match number of trials in the data.")
-            start_times_dt = self._aligned_start_times
-
         session_start_time = None
         if "session_start_time" in metadata["NWBFile"]:
             session_start_time = metadata["NWBFile"]["session_start_time"]
