@@ -61,3 +61,13 @@ All timestamps in the NWB file are represented as relative times (in seconds) fr
 The session start time is set to the time when the Neuralynx system began recording, which is
 `2024-09-26 09:01:38.000000` in the example session. The timestamp of the first trial (from `09262024_trlist.mat`)
 is `2024-09-26 12:37:27.53965`, which corresponds to a relative time of `12949.053965` seconds after the session start.
+
+### Trial-aligned FSCV data
+
+Trial-aligned FSCV signals (such as dopamine, pH, motion, and oxidation current) are now stored in the NWB file using a `TimeIntervals` table within a processing module. Each row of the table corresponds to a trial, with `start_time` and `stop_time` matching the trial's interval. Additional columns store the trial-aligned signals and metadata for each trial:
+
+- `good`: Whether the FSCV data for that trial is considered good quality.
+- `da`: PCA extracted dopamine concentration time series.
+- `ph`: pH change time series.
+- `m`: Motion artifact time series.
+- `iox`: Measured oxidation current at 0.6 V.
