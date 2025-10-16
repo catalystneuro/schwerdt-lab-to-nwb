@@ -7,7 +7,11 @@ from neuroconv.datainterfaces import (
     PlexonSortingInterface,
 )
 
-from schwerdt_lab_to_nwb.interfaces import BehaviorInterface, NlxLfpRecordingInterface
+from schwerdt_lab_to_nwb.interfaces import (
+    BehaviorInterface,
+    NlxLfpRecordingInterface,
+    TrialAlignedFSCVInterface,
+)
 from schwerdt_lab_to_nwb.utils import convert_unix_timestamps_to_datetime
 
 
