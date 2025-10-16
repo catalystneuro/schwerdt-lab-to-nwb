@@ -1,4 +1,6 @@
+import datetime
 from pathlib import Path
+from typing import List
 
 import numpy as np
 from neuroconv import BaseDataInterface
@@ -9,7 +11,10 @@ from pymatreader import read_mat
 from pynwb.device import Device
 from pynwb.ecephys import ElectricalSeries, ElectrodeGroup, FilteredEphys
 
-from schwerdt_lab_to_nwb.utils import get_channel_index_from_lfp_file_path
+from schwerdt_lab_to_nwb.utils import (
+    convert_timestamps_to_relative_timestamps,
+    get_channel_index_from_lfp_file_path,
+)
 
 
 class NlxLfpRecordingInterface(BaseDataInterface):
@@ -213,7 +218,9 @@ class NlxLfpRecordingInterface(BaseDataInterface):
 
         return continuous_time, continuous_signal
 
-    def add_lfp_to_nwbfile(self, nwbfile, metadata: dict, time_offset: float = 30.0, stub_test: bool = False) -> None:
+    def add_lfp_to_nwbfile(
+        self, nwbfile, metadata: dict, trial_start_times: List[datetime.datetime], stub_test: bool = False
+    ) -> None:
         """ """
         lfp_data = self.read_data()
         if not isinstance(lfp_data, list):
@@ -221,14 +228,18 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         num_trials = len(lfp_data)
         if stub_test:
             num_trials = min(num_trials, 100)
-        trials = nwbfile.trials
-        if trials is None:
-            raise ValueError("NWBFile does not contain trials. Please add trials before adding LFP data.")
-        trial_start_times = trials["start_time"][:num_trials]
 
+        trial_midpoint_times_dt = trial_start_times[:num_trials]
+        session_start_time = None
+        if "session_start_time" in metadata["NWBFile"]:
+            session_start_time = metadata["NWBFile"]["session_start_time"]
+        relative_trial_start_times = convert_timestamps_to_relative_timestamps(
+            timestamps=trial_midpoint_times_dt,
+            start_time=session_start_time,
+        )
         timestamps, lfp_traces = self.reconstruct_continuous_signal_from_trials(
-            trial_start_times=trial_start_times,
-            time_offset=time_offset,
+            trial_start_times=relative_trial_start_times,
+            time_offset=30.0,
             stub_test=stub_test,
         )
         if lfp_traces.ndim == 1:
@@ -272,5 +283,7 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         )
         ecephys_module.add(container)
 
-    def add_to_nwbfile(self, nwbfile, metadata: dict, stub_test: bool = False) -> None:
-        self.add_lfp_to_nwbfile(nwbfile, metadata, stub_test=stub_test)
+    def add_to_nwbfile(
+        self, nwbfile, metadata: dict, trial_start_times: list[datetime.datetime] = None, stub_test: bool = False
+    ) -> None:
+        self.add_lfp_to_nwbfile(nwbfile, metadata, trial_start_times=trial_start_times, stub_test=stub_test)
