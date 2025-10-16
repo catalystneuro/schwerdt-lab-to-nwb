@@ -20,6 +20,6 @@ class Amjad2025NWBConverter(NWBConverter):
         Recording=NeuralynxRecordingInterface,
         Sorting=PlexonSortingInterface,
         LFP=NlxLfpRecordingInterface,
-        TrialAlignedFSCV=TrialAlignedFSCVInterface,
         Behavior=BehaviorInterface,
+        TrialAlignedFSCV=TrialAlignedFSCVInterface,
     )
