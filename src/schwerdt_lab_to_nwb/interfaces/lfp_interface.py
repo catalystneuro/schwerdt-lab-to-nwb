@@ -183,35 +183,48 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         fs = self.source_data["sampling_frequency"]
         num_samples_per_trial = len(lfp_per_trial[0])
 
-        continuous_signal = []
-        continuous_time = []
+        continuous_signal_parts = []
+        continuous_time_parts = []
 
         for i, trial_data in enumerate(lfp_per_trial):
             trial_start = trial_start_times[i] - time_offset  # since trial starts 30 seconds in
             trial_time = trial_start + np.arange(num_samples_per_trial) / fs
+
+            # Determine margin for overlap handling
+            margin = 0
+            if i > 0 and trial_time[0] < continuous_time_parts[-1][-1]:
+                margin = int(0.1 * len(trial_data))  # 10% margin on each side
+
+            middle_time = trial_time[margin : len(trial_data)]
+            middle_data = trial_data[margin : len(trial_data)]
+
             if i == 0:
-                # just add the first trial
-                continuous_signal.append(trial_data)
-                continuous_time.append(trial_time)
+                # First trial, just append
+                continuous_signal_parts.append(middle_data)
+                continuous_time_parts.append(middle_time)
             else:
-                last_timestamp = continuous_time[-1][-1]
-                gap = trial_time[0] - last_timestamp - 1 / fs  # subtract one sample to avoid tiny overlap
-                if gap > 1 / fs:  # more than one sample missing
+                last_timestamp = continuous_time_parts[-1][-1]
+                gap = middle_time[0] - last_timestamp - 1 / fs
+
+                if gap > 1 / fs:
+                    # Insert NaNs for gaps
                     n_gap = int(np.round(gap * fs))
-                    continuous_signal.append(np.full(n_gap, np.nan))
-                    continuous_time.append(last_timestamp + np.arange(1, n_gap + 1) / fs)
+                    continuous_signal_parts.append(np.full(n_gap, np.nan))
+                    continuous_time_parts.append(last_timestamp + np.arange(1, n_gap + 1) / fs)
+                    mask = middle_time > last_timestamp
+                else:
+                    # Remove overlapping samples
+                    overlap = trial_time[margin] - trial_time[0]
+                    mask = middle_time > last_timestamp - overlap
+                    continuous_signal_parts[-1] = continuous_signal_parts[-1][:-margin]
+                    continuous_time_parts[-1] = continuous_time_parts[-1][:-margin]
 
-                # clip overlapping samples
-                trial_mask = trial_time > last_timestamp
-                trial_data = trial_data[trial_mask]
-                trial_time = trial_time[trial_mask]
-
-                continuous_signal.append(trial_data)
-                continuous_time.append(trial_time)
+                continuous_signal_parts.append(middle_data[mask])
+                continuous_time_parts.append(middle_time[mask])
 
         # convert to single arrays
-        continuous_signal = np.concatenate(continuous_signal)
-        continuous_time = np.concatenate(continuous_time)
+        continuous_signal = np.concatenate(continuous_signal_parts)
+        continuous_time = np.concatenate(continuous_time_parts)
 
         if not np.all(np.diff(continuous_time) > 0):  # ensure continuous time
             raise ValueError("Timestamps are not strictly increasing. Check the LFP data for inconsistencies.")
