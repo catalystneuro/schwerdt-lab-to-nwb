@@ -9,6 +9,7 @@ from neuroconv.datainterfaces import (
 
 from schwerdt_lab_to_nwb.interfaces import (
     BehaviorInterface,
+    FSCVRecordingInterface,
     NlxLfpRecordingInterface,
     TrialAlignedFSCVInterface,
 )
@@ -22,6 +23,7 @@ class Amjad2025NWBConverter(NWBConverter):
 
     data_interface_classes = dict(
         Recording=NeuralynxRecordingInterface,
+        FSCVRecording=FSCVRecordingInterface,
         Sorting=PlexonSortingInterface,
         LFP=NlxLfpRecordingInterface,
         Behavior=BehaviorInterface,
