@@ -84,3 +84,20 @@ Events:
     name: events_table
     description: |
       This table contains the events related to the task performance, including timestamps for task initiation, reward delivery, and other significant behavioral events.
+
+# Contains metadata for trial-aligned FSCV data
+TrialAlignedFSCV:
+  table:
+    name: trial_aligned_fscv_table
+    description: This table contains the results of the Fast-Scan Cyclic Voltammetry (FSCV) analysis, including dopamine concentration time series and related signals (PH, motion, oxidation current).
+  columns:
+    - name: good
+      description: Whether the FSCV data for that trial is considered good quality or not.
+    - name: da
+      description: PCA extracted dopamine concentration time series.
+    - name: ph
+      description: PH change time series.
+    - name: m
+      description: Motion artifact time series.
+    - name: iox
+      description: Measured oxidation current at 0.6 V (approximate voltage at which dopamine oxidizes).

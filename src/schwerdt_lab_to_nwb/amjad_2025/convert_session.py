@@ -6,7 +6,6 @@ from zoneinfo import ZoneInfo
 
 from natsort import natsorted
 from neuroconv.utils import dict_deep_update, load_dict_from_file
-from numpy.testing import assert_array_equal
 from pydantic import DirectoryPath
 
 from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
@@ -104,12 +103,24 @@ def session_to_nwb(
                 f"TTL code to event name mapping is required when '{trlist_file_path}' is specified. "
                 "Please provide this mapping using the 'event_mapping' argument."
             )
+    else:
+        raise ValueError(f"Expected one trlist file in '{session_folder_path}', found {len(trlist_file_paths)}.")
+
+    # Add TrialAlignedFSCV
+    fscv_file_paths = list(session_folder_path.glob("*fscv*.mat"))
+    if len(fscv_file_paths) == 1:
+        fscv_file_path = fscv_file_paths[0]
+        source_data.update(
+            dict(TrialAlignedFSCV=dict(file_path=fscv_file_path, trials_key="c8ds_fscv", sampling_frequency=10.0))
+        )
 
     converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
 
-    # Add datetime to conversion
+    # Fetch metadata from converter
     metadata = converter.get_metadata()
     session_start_time = metadata["NWBFile"]["session_start_time"]
+
+    # Add datetime to conversion
     session_start_time = session_start_time.replace(tzinfo=ZoneInfo("America/New_York"))
     metadata["NWBFile"].update(session_start_time=session_start_time)
 
@@ -256,28 +267,3 @@ if __name__ == "__main__":
         ttl_code_to_event_name=event_code_dict,
         stub_test=stub_test,
     )
-
-    # Debugging output TODO: remove before finalizing
-    print(f"Conversion completed. NWB file saved to: {output_dir_path}")
-    # read the nwb file and check the metadata
-    import pandas as pd
-    from pynwb import NWBHDF5IO
-
-    pd.set_option("display.max_columns", None)
-    nwbfile_path = output_dir_path / "nwb_stub" / "sub-Monkey-T_ses-09262024.nwb"
-    with NWBHDF5IO(nwbfile_path, "r") as io:
-        nwbfile = io.read()
-        assert len(nwbfile.devices) == 1, "Expected one device in the NWB file."
-        assert len(nwbfile.electrode_groups) == 1, "Expected one electrode group in the NWB file."
-        print(nwbfile.trials[:].head())
-        assert "location" in nwbfile.electrodes.colnames, "Expected 'location' column in electrodes table."
-        print(nwbfile.electrodes[:].head())
-        # check that the brain area is set correctly
-        assert_array_equal(
-            nwbfile.electrodes["location"][:], ["c3bs", "c3a"]
-        ), "Expected brain areas to match the provided dictionary."
-        # check that the events are present
-        assert (
-            nwbfile.processing["events"]["events_table"] is not None
-        ), "Expected events table to be present in the NWB file."
-        print(nwbfile.processing["events"]["events_table"][:].head())
