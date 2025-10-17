@@ -82,3 +82,13 @@ To ensure that behavioral events and trial information are accurately aligned wi
 - The `BehaviorInterface` then uses these aligned times when adding trials and events to the NWB file.
 
 This approach guarantees that behavioral, ephys, and FSCV data are temporally synchronized for downstream analysis.
+
+### Trial-aligned FSCV data
+
+Trial-aligned FSCV signals (such as dopamine, pH, motion, and oxidation current) are now stored in the NWB file using a `TimeIntervals` table within a processing module. Each row of the table corresponds to a trial, with `start_time` and `stop_time` matching the trial's interval. Additional columns store the trial-aligned signals and metadata for each trial:
+
+- `good`: Whether the FSCV data for that trial is considered good quality.
+- `da`: PCA extracted dopamine concentration time series.
+- `ph`: pH change time series.
+- `m`: Motion artifact time series.
+- `iox`: Measured oxidation current at 0.6 V.

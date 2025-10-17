@@ -7,7 +7,11 @@ from neuroconv.datainterfaces import (
     PlexonSortingInterface,
 )
 
-from schwerdt_lab_to_nwb.interfaces import BehaviorInterface, NlxLfpRecordingInterface
+from schwerdt_lab_to_nwb.interfaces import (
+    BehaviorInterface,
+    NlxLfpRecordingInterface,
+    TrialAlignedFSCVInterface,
+)
 from schwerdt_lab_to_nwb.utils import convert_unix_timestamps_to_datetime
 
 
@@ -21,6 +25,7 @@ class Amjad2025NWBConverter(NWBConverter):
         Sorting=PlexonSortingInterface,
         LFP=NlxLfpRecordingInterface,
         Behavior=BehaviorInterface,
+        TrialAlignedFSCV=TrialAlignedFSCVInterface,
     )
 
     def temporally_align_data_interfaces(self, metadata: dict | None = None, conversion_options: dict | None = None):
