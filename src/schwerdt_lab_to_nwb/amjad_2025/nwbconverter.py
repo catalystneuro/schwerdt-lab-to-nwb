@@ -9,6 +9,7 @@ from neuroconv.datainterfaces import (
 
 from schwerdt_lab_to_nwb.interfaces import (
     BehaviorInterface,
+    EyeTrackingBehaviorInterface,
     NlxLfpRecordingInterface,
     TrialAlignedFSCVInterface,
 )
@@ -26,6 +27,7 @@ class Amjad2025NWBConverter(NWBConverter):
         LFP=NlxLfpRecordingInterface,
         Behavior=BehaviorInterface,
         TrialAlignedFSCV=TrialAlignedFSCVInterface,
+        EyeTracking=EyeTrackingBehaviorInterface,
     )
 
     def temporally_align_data_interfaces(self, metadata: dict | None = None, conversion_options: dict | None = None):
