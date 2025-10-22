@@ -102,7 +102,7 @@ aligned_fscv_timestamps = np.interp(
 The schematic below illustrates the alignment process. Key event markers (black squares: trial start times from the FSCV system)
 are mapped to corresponding timestamps in the Neuralynx system using interpolation (red arrows).
 
-![Alt text](time_alignment_schematic.png
+![Alt text](time_alignment_schematic.png)
 
 This approach guarantees that behavioral, ephys, and FSCV data are temporally synchronized for downstream analysis.
 
