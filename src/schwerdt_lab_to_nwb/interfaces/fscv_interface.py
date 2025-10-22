@@ -115,7 +115,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
 
         return metadata
 
-    def read_data(self, conversion_factor: float) -> tuple[np.ndarray, np.ndarray]:
+    def read_data(self, conversion_factor: float, stub_test: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """
         Reads the FSCV data from the specified files.
 
@@ -123,6 +123,8 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         ----------
         conversion_factor : float
             Factor to convert raw signal (V) to current (A).
+        stub_test : bool, default: False
+            If True, only a subset of the data is read for testing purposes.
 
         Returns
         -------
@@ -133,7 +135,12 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         """
         applied_voltages = []
         channels = []
-        for file_path in self.source_data["file_paths"]:
+
+        num_files = len(self.source_data["file_paths"])
+        if stub_test:
+            num_files = min(3, num_files)
+
+        for file_path in self.source_data["file_paths"][:num_files]:
             mat = read_mat(file_path)
             if self.data_key not in mat:
                 raise KeyError(f"Key '{self.data_key}' not found in {file_path}")
@@ -150,7 +157,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
 
         return excitation_series, response_series
 
-    def get_original_timestamps(self) -> np.ndarray:
+    def get_original_timestamps(self, stub_test: bool = False) -> np.ndarray:
         """
         Get the original timestamps from the FSCV data files.
 
@@ -160,7 +167,12 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
             Array of original timestamps.
         """
         times = []
-        for file_path in self.source_data["file_paths"]:
+
+        num_files = len(self.source_data["file_paths"])
+        if stub_test:
+            num_files = min(3, num_files)
+
+        for file_path in self.source_data["file_paths"][:num_files]:
             mat = read_mat(file_path)
             if self.data_key not in mat:
                 raise KeyError(f"Key '{self.data_key}' not found in {file_path}")
@@ -168,16 +180,18 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
             times.append(data[:, 0])
         return np.concatenate(times)
 
-    def get_timestamps(self) -> np.ndarray:
-        return self._timestamps if self._timestamps is not None else self.get_original_timestamps()
+    def get_timestamps(self, stub_test: bool = False) -> np.ndarray:
+        return self._timestamps if self._timestamps is not None else self.get_original_timestamps(stub_test=stub_test)
 
     def set_aligned_timestamps(self, aligned_timestamps):
         self._timestamps = aligned_timestamps
 
-    def set_aligned_starting_time(self, aligned_starting_time: float) -> None:
-        self.set_aligned_timestamps(aligned_timestamps=self.get_timestamps() + aligned_starting_time)
+    def set_aligned_starting_time(self, aligned_starting_time: float, stub_test: bool = False) -> None:
+        self.set_aligned_timestamps(aligned_timestamps=self.get_timestamps(stub_test=stub_test) + aligned_starting_time)
 
-    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict, conversion_factor: float) -> None:
+    def add_to_nwbfile(
+        self, nwbfile: NWBFile, metadata: dict, conversion_factor: float, stub_test: bool = False
+    ) -> None:
         """
         Adds the FSCV data to the NWB file.
 
@@ -189,9 +203,11 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
             Metadata for the FSCV data.
         conversion_factor : float
             Factor to convert raw signal (V) to current (A).
+        stub_test : bool, default: False
+            If True, only a subset of the data is processed for testing purposes.
         """
-        excitation_series, response_series = self.read_data(conversion_factor=conversion_factor)
-        timestamps = self.get_timestamps()
+        excitation_series, response_series = self.read_data(conversion_factor=conversion_factor, stub_test=stub_test)
+        timestamps = self.get_timestamps(stub_test=stub_test)
 
         excitation_series_metadata = metadata["FSCV"]["FSCVExcitationSeries"]
         excitation_series_obj = FSCVExcitationSeries(
