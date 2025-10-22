@@ -66,7 +66,7 @@ def session_to_nwb(
     channel_indices = list(fscv_channel_ids_to_brain_area.keys())
     if len(channel_indices) == 1:
         brain_area = fscv_channel_ids_to_brain_area[channel_indices[0]]
-        file_paths = natsorted(session_folder_path.parent.rglob(f"raw*/*{brain_area}*.mat"))[:3]
+        file_paths = natsorted(session_folder_path.parent.rglob(f"raw*/*{brain_area}*.mat"))
         if len(file_paths):
             source_data.update(
                 dict(
@@ -77,7 +77,7 @@ def session_to_nwb(
                     )
                 )
             )
-            conversion_options.update(dict(FSCVRecording=dict(conversion_factor=1e9 / 4.99e6)))
+            conversion_options.update(dict(FSCVRecording=dict(conversion_factor=1e9 / 4.99e6, stub_test=stub_test)))
 
     # Add LFP
     lfp_file_paths = list(session_folder_path.glob("*.mat"))
