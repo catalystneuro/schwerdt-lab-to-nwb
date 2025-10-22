@@ -14,7 +14,7 @@ class EyeTrackingBehaviorInterface(BaseDataInterface):
 
     keywords = ("behavior", "eye-tracking")
 
-    def __init__(self, folder_path: DirectoryPath, verbose: bool = False):
+    def __init__(self, folder_path: DirectoryPath, stream_name: str, verbose: bool = False):
         """
         Initialize the EyeTrackingBehaviorInterface.
 
@@ -22,12 +22,16 @@ class EyeTrackingBehaviorInterface(BaseDataInterface):
         ----------
         folder_path : DirectoryPath
             Path to the folder containing Neuralynx eye-tracking files.
+        stream_name : str
+            The stream ID corresponding to the eye-tracking data in the Neuralynx files.
         verbose : bool, optional
             Whether to print verbose output during processing.
         """
         super().__init__(folder_path=folder_path)
         self.verbose = verbose
-        self.extractor_eye_tracking = NeuralynxRecordingExtractor(folder_path=self.source_data["folder_path"])
+        self.extractor_eye_tracking = NeuralynxRecordingExtractor(
+            folder_path=self.source_data["folder_path"], stream_name=stream_name
+        )
 
     def get_metadata(self) -> DeepDict:
         from neuroconv.datainterfaces.ecephys.neuralynx.neuralynxdatainterface import (
@@ -57,7 +61,9 @@ class EyeTrackingBehaviorInterface(BaseDataInterface):
 
         metadata["Behavior"]["EyeTracking"].update(
             SpatialSeries=dict(
-                name="eye_tracking_series", description="Eye tracking data as recorded by Neuralynx system."
+                name="eye_tracking_series",
+                description="Eye tracking data as recorded by Neuralynx system.",
+                unit="a.u.",
             )
         )
 
@@ -82,6 +88,7 @@ class EyeTrackingBehaviorInterface(BaseDataInterface):
             description=spatial_series_metadata["description"],
             starting_time=self.extractor_eye_tracking.get_start_time(),
             rate=rate,
+            unit=spatial_series_metadata["unit"],
         )
 
         eye_tracking = EyeTracking(spatial_series=[spatial_series])
