@@ -58,6 +58,7 @@ Ecephys:
 #    name: differential_lfp_series
 #    description: Beta-band LFP was computed as a differential signal from bipolar EPhys measurements (Neuralynx, Digital Lynx SX) made by pairs of electrodes, with the signal representing the voltage difference between # sites will be automatically extracted from the file name, no need to insert it here.
 
+# Contains metadata for the raw FSCV data (measured current and applied voltages, sampled at 25kHz)
 FSCV:
     Device:
       name: device_fscv
