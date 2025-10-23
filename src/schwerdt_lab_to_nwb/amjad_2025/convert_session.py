@@ -1,8 +1,10 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 
+import re
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from natsort import natsorted
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 from pydantic import DirectoryPath
 
@@ -13,7 +15,8 @@ def session_to_nwb(
     session_folder_path: DirectoryPath,
     nwb_folder_path: DirectoryPath,
     subject_key: str,
-    channel_name_to_brain_area: dict[str, str] | None = None,
+    fscv_channel_ids_to_brain_area: dict[int, str],
+    ephys_channel_name_to_brain_area: dict[str, str] | None = None,
     ttl_code_to_event_name: dict[int, str] | None = None,
     stub_test: bool = False,
     verbose: bool = False,
@@ -32,9 +35,11 @@ def session_to_nwb(
         The file will be named 'sub-{subject_id}_ses-{session_id}.nwb'.
     subject_key : str
         The subject key to look for in the metadata under 'Subjects' section (e.g. "Monkey T", "Monkey P").
-    channel_name_to_brain_area : dict[str, str] | None, optional
-        A dictionary mapping channel names to brain areas.
+    ephys_channel_name_to_brain_area : dict[str, str] | None, optional
+        A dictionary mapping EPhys channel names to brain areas.
         If provided, the brain area will be set for each channel in the NWB file.
+    fscv_channel_ids_to_brain_area : dict[int, str]
+        A dictionary mapping FSCV channel IDs (1-based indexing) to brain areas.
     ttl_code_to_event_name : dict[int, str] | None, optional
         A dictionary mapping TTL event codes to event names.
     stub_test : bool, optional
@@ -57,8 +62,26 @@ def session_to_nwb(
     source_data.update(dict(Recording=dict(folder_path=session_folder_path, es_key="electrical_series")))
     conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
 
+    # Add FSCV Recording
+    channel_indices = list(fscv_channel_ids_to_brain_area.keys())
+    if len(channel_indices) == 1:
+        brain_area = fscv_channel_ids_to_brain_area[channel_indices[0]]
+        file_paths = natsorted(session_folder_path.parent.rglob(f"raw*/*{brain_area}*.mat"))
+        if len(file_paths):
+            source_data.update(
+                dict(
+                    FSCVRecording=dict(
+                        file_paths=file_paths,
+                        channel_ids_to_brain_area=fscv_channel_ids_to_brain_area,
+                        data_key="recordedData",
+                    )
+                )
+            )
+            conversion_options.update(dict(FSCVRecording=dict(conversion_factor=1e9 / 4.99e6, stub_test=stub_test)))
+
     # Add LFP
-    lfp_file_paths = list(session_folder_path.glob("*tr_nlx*.mat"))
+    lfp_file_paths = list(session_folder_path.glob("*.mat"))
+    lfp_file_paths = [fp for fp in lfp_file_paths if re.match(r"tr_nlx_[a-zA-Z0-9]+-[a-zA-Z0-9]+\.mat$", fp.name)]
     if len(lfp_file_paths) == 1:
         lfp_file_path = lfp_file_paths[0]
         source_data.update(dict(LFP=dict(file_path=lfp_file_path, trials_key="tr_nlx", sampling_frequency=1000.0)))
@@ -124,14 +147,14 @@ def session_to_nwb(
 
     metadata["NWBFile"]["session_id"] = session_id
 
-    if channel_name_to_brain_area is not None:
+    if ephys_channel_name_to_brain_area is not None:
         # Get the recording extractor from the interface
         recording_interface = converter.data_interface_objects["Recording"]
         recording_extractor = recording_interface.recording_extractor
 
         channel_ids = recording_interface.channel_ids
         brain_areas = [
-            channel_name_to_brain_area.get(
+            ephys_channel_name_to_brain_area.get(
                 recording_extractor.get_channel_property(channel_id=channel_id, key="channel_name"), "unknown"
             )
             for channel_id in channel_ids
@@ -158,14 +181,23 @@ def session_to_nwb(
 if __name__ == "__main__":
 
     # Parameters for conversion
-    data_dir_path = Path("/Users/weian/data/Schwerdt/data_NWB_catalystneuro/Monkey T/09262024")
+    data_dir_path = Path("/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024")
     output_dir_path = Path("/Users/weian/data/Schwerdt/nwbfiles")
     stub_test = True
 
     # Define brain areas for each channel using a dictionary
-    channel_name_to_brain_area = {
+    # TODO extras this from 'recording sites.xlsx' when available
+    ephys_channel_name_to_brain_area = {
         "CSC37": "c3bs",
         "CSC38": "c3a",
+        "csc23": "c5d",
+        "csc12": "cl3",
+        "CSC7": "c5c",
+        "CSC47": "c7b",
+    }
+
+    fscv_channel_ids_to_brain_area = {
+        6: "c8ds",  # 0-based indexing (would be channel 7 in MATLAB)
     }
 
     # TODO: Extract this from file when available
@@ -235,7 +267,8 @@ if __name__ == "__main__":
         session_folder_path=data_dir_path,
         nwb_folder_path=output_dir_path,
         subject_key="Monkey T",
-        channel_name_to_brain_area=channel_name_to_brain_area,
+        ephys_channel_name_to_brain_area=ephys_channel_name_to_brain_area,
+        fscv_channel_ids_to_brain_area=fscv_channel_ids_to_brain_area,
         ttl_code_to_event_name=event_code_dict,
         stub_test=stub_test,
     )
