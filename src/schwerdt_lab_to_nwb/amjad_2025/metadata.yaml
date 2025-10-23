@@ -27,12 +27,20 @@ NWBFile:
     - Schwerdt, Helen N.
     - Amjad, Usamma
   protocol: https://doi.org/10.17504/protocols.io.kqdg32b91v25/v1, https://doi.org/10.17504/protocols.io.x54v92wd4l3e/v1, https://doi.org/10.17504/protocols.io.bp2l62m95gqe/v1
-Subject:
-  species: Macaca mulatta
-  description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
-  age: P8Y  # TODO: replace placeholder value (in ISO 8601, such as "P8Y" (example: 8 years))
-  sex: F
-  # date_of_birth: TBD  # Actual date not specified in methods
+
+Subjects:
+  Monkey T:
+    subject_id: Monkey T
+    age: P11Y # 11 years in ISO 8601
+    species: Macaca mulatta
+    sex: F
+    description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
+  Monkey P:
+    subject_id: Monkey P
+    age: P8Y # 8 years in ISO 8601
+    species: Macaca mulatta
+    sex: F
+    description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
 
 Ecephys:
   Device:
@@ -46,9 +54,29 @@ Ecephys:
   electrical_series:
     name: electrical_series
     description: The raw acquisition traces from Neuralynx (Digital Lynx SX) acquired with a unity-gain headstage (Neuralynx, HS-36, ±1 mV input range, at 30 or 32 kHz).
+  lfp_series:
+    name: differential_lfp_series
+    description: Beta-band LFP was computed as a differential signal from bipolar EPhys measurements (Neuralynx, Digital Lynx SX) made by pairs of electrodes, with the signal representing the voltage difference between # sites will be automatically extracted from the file name, no need to insert it here.
 
 Events:
   AnnotatedEventsTable:
     name: events_table
     description: |
       This table contains the events related to the task performance, including timestamps for task initiation, reward delivery, and other significant behavioral events.
+
+# Contains metadata for trial-aligned FSCV data
+TrialAlignedFSCV:
+  table:
+    name: trial_aligned_fscv_table
+    description: This table contains the results of the Fast-Scan Cyclic Voltammetry (FSCV) analysis, including dopamine concentration time series and related signals (PH, motion, oxidation current).
+  columns:
+    - name: good
+      description: Whether the FSCV data for that trial is considered good quality or not.
+    - name: da
+      description: PCA extracted dopamine concentration time series.
+    - name: ph
+      description: PH change time series.
+    - name: m
+      description: Motion artifact time series.
+    - name: iox
+      description: Measured oxidation current at 0.6 V (approximate voltage at which dopamine oxidizes).

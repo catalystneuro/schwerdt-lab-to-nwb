@@ -4,7 +4,6 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from neuroconv.utils import dict_deep_update, load_dict_from_file
-from numpy.testing import assert_array_equal
 from pydantic import DirectoryPath
 
 from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
@@ -13,6 +12,7 @@ from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
 def session_to_nwb(
     session_folder_path: DirectoryPath,
     nwb_folder_path: DirectoryPath,
+    subject_key: str,
     channel_name_to_brain_area: dict[str, str] | None = None,
     ttl_code_to_event_name: dict[int, str] | None = None,
     stub_test: bool = False,
@@ -30,6 +30,8 @@ def session_to_nwb(
     nwb_folder_path : DirectoryPath
         The directory path where the converted NWB file will be saved.
         The file will be named 'sub-{subject_id}_ses-{session_id}.nwb'.
+    subject_key : str
+        The subject key to look for in the metadata under 'Subjects' section (e.g. "Monkey T", "Monkey P").
     channel_name_to_brain_area : dict[str, str] | None, optional
         A dictionary mapping channel names to brain areas.
         If provided, the brain area will be set for each channel in the NWB file.
@@ -48,15 +50,19 @@ def session_to_nwb(
         nwb_folder_path = nwb_folder_path / "nwb_stub"
     nwb_folder_path.mkdir(parents=True, exist_ok=True)
 
-    subject_id = str(session_folder_path.parent.name).replace(" ", "-")
-    nwbfile_path = nwb_folder_path / f"sub-{subject_id}_ses-{session_id}.nwb"
-
     source_data = dict()
     conversion_options = dict()
 
     # Add Recording
     source_data.update(dict(Recording=dict(folder_path=session_folder_path, es_key="electrical_series")))
     conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
+
+    # Add LFP
+    lfp_file_paths = list(session_folder_path.glob("*tr_nlx*.mat"))
+    if len(lfp_file_paths) == 1:
+        lfp_file_path = lfp_file_paths[0]
+        source_data.update(dict(LFP=dict(file_path=lfp_file_path, trials_key="tr_nlx", sampling_frequency=1000.0)))
+        conversion_options.update(dict(LFP=dict(stub_test=stub_test)))
 
     # Add Sorting
     plexon_sorting_file_paths = list(session_folder_path.glob("csc*.plx"))
@@ -79,12 +85,24 @@ def session_to_nwb(
                 f"TTL code to event name mapping is required when '{trlist_file_path}' is specified. "
                 "Please provide this mapping using the 'event_mapping' argument."
             )
+    else:
+        raise ValueError(f"Expected one trlist file in '{session_folder_path}', found {len(trlist_file_paths)}.")
+
+    # Add TrialAlignedFSCV
+    fscv_file_paths = list(session_folder_path.glob("*fscv*.mat"))
+    if len(fscv_file_paths) == 1:
+        fscv_file_path = fscv_file_paths[0]
+        source_data.update(
+            dict(TrialAlignedFSCV=dict(file_path=fscv_file_path, trials_key="c8ds_fscv", sampling_frequency=10.0))
+        )
 
     converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
 
-    # Add datetime to conversion
+    # Fetch metadata from converter
     metadata = converter.get_metadata()
     session_start_time = metadata["NWBFile"]["session_start_time"]
+
+    # Add datetime to conversion
     session_start_time = session_start_time.replace(tzinfo=ZoneInfo("America/New_York"))
     metadata["NWBFile"].update(session_start_time=session_start_time)
 
@@ -96,7 +114,14 @@ def session_to_nwb(
     # Update the ecephys metadata
     metadata["Ecephys"] = editable_metadata["Ecephys"]
 
-    metadata["Subject"]["subject_id"] = subject_id
+    subject_metadata = metadata["Subjects"].get(subject_key, None)
+    if subject_metadata is None:
+        raise ValueError(
+            f"Subject '{subject_key}' is not found in the metadata. "
+            f"Please add an entry for this subject to '{editable_metadata_path}' under the 'Subjects' section."
+        )
+    metadata["Subject"] = subject_metadata
+
     metadata["NWBFile"]["session_id"] = session_id
 
     if channel_name_to_brain_area is not None:
@@ -117,6 +142,9 @@ def session_to_nwb(
             values=brain_areas,
             ids=channel_ids,
         )
+
+    subject_id = subject_metadata["subject_id"].replace(" ", "-")
+    nwbfile_path = nwb_folder_path / f"sub-{subject_id}_ses-{session_id}.nwb"
 
     # Run conversion
     converter.run_conversion(
@@ -206,32 +234,8 @@ if __name__ == "__main__":
     session_to_nwb(
         session_folder_path=data_dir_path,
         nwb_folder_path=output_dir_path,
+        subject_key="Monkey T",
         channel_name_to_brain_area=channel_name_to_brain_area,
         ttl_code_to_event_name=event_code_dict,
         stub_test=stub_test,
     )
-
-    # Debugging output TODO: remove before finalizing
-    print(f"Conversion completed. NWB file saved to: {output_dir_path}")
-    # read the nwb file and check the metadata
-    import pandas as pd
-    from pynwb import NWBHDF5IO
-
-    pd.set_option("display.max_columns", None)
-    nwbfile_path = output_dir_path / "nwb_stub" / "sub-Monkey-T_ses-09262024.nwb"
-    with NWBHDF5IO(nwbfile_path, "r") as io:
-        nwbfile = io.read()
-        assert len(nwbfile.devices) == 1, "Expected one device in the NWB file."
-        assert len(nwbfile.electrode_groups) == 1, "Expected one electrode group in the NWB file."
-        print(nwbfile.trials[:].head())
-        assert "location" in nwbfile.electrodes.colnames, "Expected 'location' column in electrodes table."
-        print(nwbfile.electrodes[:].head())
-        # check that the brain area is set correctly
-        assert_array_equal(
-            nwbfile.electrodes["location"][:], ["c3bs", "c3a"]
-        ), "Expected brain areas to match the provided dictionary."
-        # check that the events are present
-        assert (
-            nwbfile.processing["events"]["events_table"] is not None
-        ), "Expected events table to be present in the NWB file."
-        print(nwbfile.processing["events"]["events_table"][:].head())
