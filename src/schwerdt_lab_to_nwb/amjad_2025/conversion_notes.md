@@ -115,3 +115,12 @@ Trial-aligned FSCV signals (such as dopamine, pH, motion, and oxidation current)
 - `ph`: pH change time series.
 - `m`: Motion artifact time series.
 - `iox`: Measured oxidation current at 0.6 V.
+
+### Eye tracking
+
+Raw eye-tracking signals recorded by the Neuralynx system are imported and stored in the NWB acquisition as an `EyeTracking`
+container containing one `SpatialSeries` that stores the continuous gaze position time series (x, y).
+
+**Files and code reference**
+Raw Neuralynx CSC files: `CSC145.ncs` (y) and `CSC146.ncs` (x).
+Implementation: `src/schwerdt_lab_to_nwb/interfaces/eye_tracking_interface.py` (EyeTrackingBehaviorInterface).

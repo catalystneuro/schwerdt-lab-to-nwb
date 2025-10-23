@@ -59,7 +59,15 @@ def session_to_nwb(
     conversion_options = dict()
 
     # Add Recording
-    source_data.update(dict(Recording=dict(folder_path=session_folder_path, es_key="electrical_series")))
+    source_data.update(
+        dict(
+            Recording=dict(
+                folder_path=session_folder_path,
+                es_key="electrical_series",
+                stream_name="stream1_32000Hz_1mVRange_DSPFilter1",
+            )
+        )
+    )
     conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
 
     # Add FSCV Recording
@@ -118,6 +126,12 @@ def session_to_nwb(
         source_data.update(
             dict(TrialAlignedFSCV=dict(file_path=fscv_file_path, trials_key="c8ds_fscv", sampling_frequency=10.0))
         )
+
+    # Add eye tracking
+    source_data.update(
+        dict(EyeTracking=dict(folder_path=session_folder_path, stream_name="stream0_32000Hz_100mVRange_DSPFilter0"))
+    )
+    conversion_options.update(dict(EyeTracking=dict(stub_test=stub_test)))
 
     converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
 

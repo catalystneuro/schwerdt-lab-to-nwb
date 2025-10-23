@@ -10,6 +10,7 @@ from neuroconv.utils import DeepDict
 
 from schwerdt_lab_to_nwb.interfaces import (
     BehaviorInterface,
+    EyeTrackingBehaviorInterface,
     FSCVRecordingInterface,
     NlxLfpRecordingInterface,
     TrialAlignedFSCVInterface,
@@ -32,6 +33,7 @@ class Amjad2025NWBConverter(NWBConverter):
         LFP=NlxLfpRecordingInterface,
         Behavior=BehaviorInterface,
         TrialAlignedFSCV=TrialAlignedFSCVInterface,
+        EyeTracking=EyeTrackingBehaviorInterface,
     )
 
     def get_metadata(self) -> DeepDict:
