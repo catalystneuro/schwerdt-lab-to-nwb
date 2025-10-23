@@ -1,23 +1,35 @@
-# Notes concerning the choi_2025 conversion
+# Notes concerning the amjad_2025 conversion
 
 ## Data exploration
 
-Example directory structure:
+Example sessions structure:
 
 ```
+data_microinvasiveProbes_manuscript/
 ├── Monkey P
-│ └── cl3_session126_csc12_100_spikes.mat
+│   ├── cl3_session126_csc12_100_spikes.mat
+│   ├── csc12.ncs
+│   └── csc12.plx
 ├── Monkey T
 │ ├── 09132024
-│ │ ├── FSCV_trlists_c8dg_09132024_firsthalf.mat
-│ │ └── rawFSCV_09132024_ts_c8dg_ramp_bin.mat
+│ │  ├── FSCV_trlists_c8dg_09132024_firsthalf.mat
+│ │  ├── rawFSCV_09132024_ts_c8dg_ramp_bin.mat
+│ │  ├── CSC145.ncs
+│ │  ├── CSC146.ncs
+│ │  ├── tr_nlx_eye x.mat
+│ │  ├── tr_nlx_eye y.mat
+│ │  ├── raw fscv with all recorded ch/
+│ │  │   ├── c5c_p4a_p1a_p3b_p2e_p1b_c8ds_c8dg_c8c_c8a_001.mat
+│ │  │   ├── c5c_p4a_p1a_p3b_p2e_p1b_c8ds_c8dg_c8c_c8a_002.mat
+│ │  └── trlists.mat
 │ └── 09262024
-│     ├── 09262024_tr_nlx_c3bs-c3a.mat
-│     ├── 09262024_trlist.mat
-│     ├── CSC37.ncs
-│     ├── CSC37_0001.ncs
-│     ├── CSC38.ncs
-│     └── CSC38_0001.ncs
+│   ├── 09262024_tr_nlx_c3bs-c3a.mat
+│   ├── 09262024_trlist.mat
+│   ├── CSC37.ncs
+│   ├── CSC38.ncs
+│   ├── CSC145.ncs
+│   ├── CSC146.ncs
+│   └── trlists.mat
 └── Notes.txt
 ```
 
