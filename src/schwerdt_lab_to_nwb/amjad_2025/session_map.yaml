@@ -1,0 +1,11 @@
+Sessions:
+  - session_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey P"
+    subject_key: "Monkey P"
+    ephys_channel_name_to_brain_area: {CSC12: "cl3"}
+    session_id: 08132018
+  - session_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey T/09132024"
+    subject_key: "Monkey T"
+    fscv_channel_ids_to_brain_area: {10: "c8dg"} # 0-based indexing (would be channel 11 in MATLAB)
+  - session_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey T/09262024"
+    subject_key: "Monkey T"
+    ephys_channel_name_to_brain_area: {CSC37: "c3bs", CSC38: "c3a"}
