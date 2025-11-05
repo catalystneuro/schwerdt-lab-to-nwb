@@ -80,3 +80,13 @@ TrialAlignedFSCV:
       description: Motion artifact time series.
     - name: iox
       description: Measured oxidation current at 0.6 V (approximate voltage at which dopamine oxidizes).
+
+Behavior:
+    EyeTracking:
+      Device:
+        name: device_ecephys
+        description: Neuralynx recording
+        SpatialSeries:
+            name: eye_tracking_series
+            description: Eye position data (x, y) recorded from Neuralynx (Digital Lynx SX).
+            unit: a.u. # arbitrary units
