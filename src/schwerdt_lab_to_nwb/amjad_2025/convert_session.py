@@ -65,8 +65,13 @@ def session_to_nwb(
         conversion_options.update(dict(LFP=dict(stub_test=stub_test)))
 
     # Add Sorting
-    # source_data.update(dict(Sorting=dict()))
-    # conversion_options.update(dict(Sorting=dict()))
+    plexon_sorting_file_paths = list(session_folder_path.glob("csc*.plx"))
+    if len(plexon_sorting_file_paths) == 1:
+        plexon_sorting_file_path = plexon_sorting_file_paths[0]
+        source_data.update(dict(Sorting=dict(file_path=plexon_sorting_file_path)))
+        conversion_options.update(
+            dict(Sorting=dict(stub_test=stub_test, units_description="Spike-sorted units from Plexon Offline Sorter."))
+        )
 
     # Add Behavior
     trlist_file_paths = list(session_folder_path.glob("*trlist*.mat"))
