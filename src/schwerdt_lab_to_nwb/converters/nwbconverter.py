@@ -1,40 +1,23 @@
 """Primary NWBConverter class for this dataset."""
 
 import numpy as np
-from neuroconv import NWBConverter
-from neuroconv.datainterfaces import (
-    NeuralynxRecordingInterface,
-    PlexonSortingInterface,
-)
+from neuroconv import ConverterPipe
 from neuroconv.utils import DeepDict
 
-from schwerdt_lab_to_nwb.interfaces import (
-    BehaviorInterface,
-    EyeTrackingBehaviorInterface,
-    FSCVRecordingInterface,
-    NlxLfpRecordingInterface,
-    TrialAlignedFSCVInterface,
-)
 from schwerdt_lab_to_nwb.utils import (
     convert_timestamps_to_relative_timestamps,
     convert_unix_timestamps_to_datetime,
 )
 
 
-class Amjad2025NWBConverter(NWBConverter):
-    """Primary conversion class for my extracellular electrophysiology dataset."""
+class MicroinvasiveProbesNWBConverter(ConverterPipe):
+    """
+    Custom NWB converter for Schwerdt Lab to convert electrophysiological (Neuralynx),
+    fast-scan cyclic voltammetry (custom format), behavioral (custom format), and eye-tracking data (Neuralynx) from
+    experiments described in https://doi.org/10.1101/2025.01.30.635139 into NWB format.
+    """
 
     trial_start_code = 128  # TTL code indicating the start of a trial
-
-    data_interface_classes = dict(
-        Recording=NeuralynxRecordingInterface,
-        FSCVRecording=FSCVRecordingInterface,
-        Sorting=PlexonSortingInterface,
-        LFP=NlxLfpRecordingInterface,
-        Behavior=BehaviorInterface,
-        TrialAlignedFSCV=TrialAlignedFSCVInterface,
-        EyeTracking=EyeTrackingBehaviorInterface,
-    )
 
     def get_metadata(self) -> DeepDict:
         metadata = super().get_metadata()
