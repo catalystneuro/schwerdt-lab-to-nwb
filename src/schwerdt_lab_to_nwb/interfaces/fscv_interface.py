@@ -218,13 +218,15 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
 
         # Create device and electrode group
         device_metadata = metadata["FSCV"]["Device"]
-        device = nwbfile.create_device(**device_metadata)
+        device_name = device_metadata["name"]
+        if device_name not in nwbfile.devices:
+            nwbfile.create_device(**device_metadata)
         electrode_group_metadata = metadata["FSCV"]["ElectrodeGroup"]
         electrode_group = nwbfile.create_electrode_group(
             name=electrode_group_metadata["name"],
             description=electrode_group_metadata["description"],
             location=electrode_group_metadata.get("location", "unknown"),
-            device=device,
+            device=nwbfile.devices[device_name],
         )
 
         # Add the electrodes to the NWBFile
@@ -241,12 +243,15 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         else:
             properties_to_fill = electrodes.colnames
             null_values_for_rows = dict()
+            null_values_for_properties = dict()
             for property in properties_to_fill:
                 if property not in ["group", "location", "group_name", "channel_name"]:
+                    if isinstance(electrodes[property][:][0], np.int64):
+                        null_values_for_properties.update({property: ""})
                     null_value = _get_null_value_for_property(
                         property=property,
                         sample_data=electrodes[property][:][0],
-                        null_values_for_properties=dict(),
+                        null_values_for_properties=null_values_for_properties,
                     )
                     null_values_for_rows[property] = null_value
 
