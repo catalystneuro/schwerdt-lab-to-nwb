@@ -106,7 +106,7 @@ def session_to_nwb(
 
                 warn(
                     f"Detected {num_detected_segments} segments in Neuralynx data for stream '{stream_name}'. "
-                    "Using NeuralynxGapModeInterface for conversion."
+                    "Using NeuralynxConcatenateSegmentRecordingInterface for conversion."
                 )
                 recording_interface = NeuralynxConcatenateSegmentRecordingInterface(
                     folder_path=session_folder_path,
