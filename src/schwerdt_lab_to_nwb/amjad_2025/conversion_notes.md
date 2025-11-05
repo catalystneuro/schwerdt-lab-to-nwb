@@ -64,7 +64,8 @@ is `2024-09-26 12:37:27.53965`, which corresponds to a relative time of `12949.0
 
 ## Time alignment between behavior and EPhys/FSCV
 
-To ensure that behavioral events and trial information are accurately aligned with electrophysiology (ephys) and fast-scan cyclic voltammetry (FSCV) data, we use a shared "trial-start" TTL event code recorded by both systems.
+To accurately synchronize behavioral events and trial information with electrophysiology (ephys) and fast-scan cyclic
+voltammetry (FSCV) data, both systems record a shared "trial-start" TTL event code.
 
 **Alignment procedure:**
 1. The Neuralynx ephys system and the behavioral system both record event codes, including a unique TTL code (typically `128`) that marks the start of each trial.
@@ -74,12 +75,34 @@ To ensure that behavioral events and trial information are accurately aligned wi
     - Use these indices to select the corresponding timestamps from `NlxEventTS` for that trial.
     - From these candidate timestamps, select the one closest to the trial's intended start time from `trlist.ts`.
     - This closest timestamp is used as the aligned trial start time on the EPhys/FSCV acquisition clock.
-4. The aligned trial start times are set in the `BehaviorInterface` and used to populate the NWB trials table, ensuring that all trial and event times are referenced to the same timeline as the ephys/FSCV recordings.
+4. The aligned trial start times are set in the BehaviorInterface and used to populate the NWB trials table, ensuring all trial and event times are referenced to the same timeline as the ephys/FSCV recordings.
 5. All timestamps are converted to relative times (seconds) from the session start time, which is set to the start of the Neuralynx recording.
 
 **Code reference:**
 - The alignment logic is implemented in `Amjad2025NWBConverter.temporally_align_data_interfaces`, which finds all trial-start events in each trial, then selects the timestamp closest to the intended trial start from `trlist.ts`.
 - The `BehaviorInterface` then uses these aligned times when adding trials and events to the NWB file.
+
+### Time alignment for raw FSCV data
+
+To synchronize raw FSCV timestamps with the Neuralynx clock, we use interpolation:
+
+```python
+import numpy as np
+# original_fscv_timestamps: The raw (unaligned) timestamps from the FSCV system (in seconds, starting from 0.0, sampled at 25kHz)
+# fscv_trial_start_times: Trial start times from the FSCV system (from "tsfscv" in the `trlist` .mat file)
+# neuralynx_trial_start_times: Aligned trial start times on the Neuralynx clock (from NlxEventTTL and NlxEventTS as described above)
+
+aligned_fscv_timestamps = np.interp(
+    x=original_fscv_timestamps,
+    xp=fscv_trial_start_times,
+    fp=neuralynx_trial_start_times,
+)
+```
+
+The schematic below illustrates the alignment process. Key event markers (black squares: trial start times from the FSCV system)
+are mapped to corresponding timestamps in the Neuralynx system using interpolation (red arrows).
+
+![Alt text](time_alignment_schematic.png)
 
 This approach guarantees that behavioral, ephys, and FSCV data are temporally synchronized for downstream analysis.
 
