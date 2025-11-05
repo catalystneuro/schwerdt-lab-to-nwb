@@ -164,7 +164,7 @@ if __name__ == "__main__":
     yaml_file_path = Path(__file__).parent / "session_map.yaml"
     output_dir_path = Path("/Users/weian/data/Schwerdt/nwbfiles/microinvasiveProbes_manuscript/")
     verbose = True
-    stub_test = True  # Set to True for quick testing with limited data
+    stub_test = False  # Set to True for quick testing with limited data
 
     dataset_to_nwb(
         yaml_file_path=yaml_file_path,
@@ -172,3 +172,13 @@ if __name__ == "__main__":
         verbose=verbose,
         stub_test=stub_test,
     )
+
+    # need to set DANDI_API_KEY
+    # dandiset_folder_path = output_dir_path / "dandiset"
+    # dandiset_folder_path.mkdir(parents=True, exist_ok=True)
+    # dandiset_id = "001627"
+    # automatic_dandi_upload(
+    #     dandiset_id=dandiset_id,
+    #     nwb_folder_path=output_dir_path,
+    #     dandiset_folder_path=dandiset_folder_path,
+    # )
