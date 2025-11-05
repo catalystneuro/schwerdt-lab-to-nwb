@@ -6,11 +6,19 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from natsort import natsorted
+from neuroconv.datainterfaces import NeuralynxRecordingInterface, PlexonSortingInterface
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 from pydantic import DirectoryPath
 from spikeinterface.extractors import NeuralynxRecordingExtractor
 
-from schwerdt_lab_to_nwb.amjad_2025 import Amjad2025NWBConverter
+from schwerdt_lab_to_nwb.converters import MicroinvasiveProbesNWBConverter
+from schwerdt_lab_to_nwb.interfaces import (
+    BehaviorInterface,
+    EyeTrackingBehaviorInterface,
+    FSCVRecordingInterface,
+    NlxLfpRecordingInterface,
+    TrialAlignedFSCVInterface,
+)
 
 
 def session_to_nwb(
@@ -58,7 +66,7 @@ def session_to_nwb(
         nwb_folder_path = nwb_folder_path / "nwb_stub"
     nwb_folder_path.mkdir(parents=True, exist_ok=True)
 
-    source_data = dict()
+    data_interfaces = dict()
     conversion_options = dict()
 
     has_neuralynx = len(list(session_folder_path.glob("*.ncs"))) > 0
@@ -75,21 +83,46 @@ def session_to_nwb(
 
         if len(recording_streams) == 1:
             stream_name = recording_streams[0]
-            recording_source_data = dict(
+
+            # Check segments
+            neuralynx_extractor = NeuralynxRecordingExtractor(
                 folder_path=session_folder_path,
                 stream_name=stream_name,
-                es_key="electrical_series",
+                strict_gap_mode=False,
             )
-            source_data.update(dict(Recording=recording_source_data))
-            conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
+            num_detected_segments = neuralynx_extractor.get_num_segments()
+            if num_detected_segments == 1:
+                recording_interface = NeuralynxRecordingInterface(
+                    folder_path=session_folder_path,
+                    stream_name=stream_name,
+                    es_key="electrical_series",
+                )
+                data_interfaces.update(dict(Recording=recording_interface))
+                conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
+            else:
+                from schwerdt_lab_to_nwb.interfaces import (
+                    NeuralynxConcatenateSegmentRecordingInterface,
+                )
+
+                warn(
+                    f"Detected {num_detected_segments} segments in Neuralynx data for stream '{stream_name}'. "
+                    "Using NeuralynxGapModeInterface for conversion."
+                )
+                recording_interface = NeuralynxConcatenateSegmentRecordingInterface(
+                    folder_path=session_folder_path,
+                    stream_name=stream_name,
+                    es_key="electrical_series",
+                )
+                data_interfaces.update(dict(Recording=recording_interface))
+                conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
 
         if len(eye_tracking_streams) == 1:
             stream_name = eye_tracking_streams[0]
-            eye_tracking_source_data = dict(
+            eye_tracking_interface = EyeTrackingBehaviorInterface(
                 folder_path=session_folder_path,
                 stream_name=stream_name,
             )
-            source_data.update(dict(EyeTracking=eye_tracking_source_data))
+            data_interfaces.update(dict(EyeTracking=eye_tracking_interface))
             conversion_options.update(dict(EyeTracking=dict(stub_test=stub_test)))
 
     # Add FSCV Recording
@@ -99,30 +132,33 @@ def session_to_nwb(
             brain_area = fscv_channel_ids_to_brain_area[channel_indices[0]]
             file_paths = natsorted(session_folder_path.parent.rglob(f"raw*/*{brain_area}*.mat"))
             if len(file_paths):
-                source_data.update(
-                    dict(
-                        FSCVRecording=dict(
-                            file_paths=file_paths,
-                            channel_ids_to_brain_area=fscv_channel_ids_to_brain_area,
-                            data_key="recordedData",
-                        )
-                    )
+                fscv_recording_interface = FSCVRecordingInterface(
+                    file_paths=file_paths,
+                    channel_ids_to_brain_area=fscv_channel_ids_to_brain_area,
+                    data_key="recordedData",
                 )
+                data_interfaces.update(dict(FSCVRecording=fscv_recording_interface))
                 conversion_options.update(dict(FSCVRecording=dict(conversion_factor=1e9 / 4.99e6, stub_test=stub_test)))
 
     # Add LFP
     lfp_file_paths = list(session_folder_path.glob("*.mat"))
-    lfp_file_paths = [fp for fp in lfp_file_paths if re.match(r"tr_nlx_[a-zA-Z0-9]+-[a-zA-Z0-9]+\.mat$", fp.name)]
+    lfp_file_paths = [fp for fp in lfp_file_paths if re.match(r".*tr_nlx_[a-zA-Z0-9]+-[a-zA-Z0-9]+\.mat$", fp.name)]
     if len(lfp_file_paths) == 1:
         lfp_file_path = lfp_file_paths[0]
-        source_data.update(dict(LFP=dict(file_path=lfp_file_path, trials_key="tr_nlx", sampling_frequency=1000.0)))
+        lfp_interface = NlxLfpRecordingInterface(
+            file_path=lfp_file_path,
+            trials_key="tr_nlx",
+            sampling_frequency=1000.0,
+        )
+        data_interfaces.update(dict(LFP=lfp_interface))
         conversion_options.update(dict(LFP=dict(stub_test=stub_test)))
 
     # Add Sorting
     plexon_sorting_file_paths = list(session_folder_path.glob("csc*.plx"))
     if len(plexon_sorting_file_paths) == 1:
         plexon_sorting_file_path = plexon_sorting_file_paths[0]
-        source_data.update(dict(Sorting=dict(file_path=plexon_sorting_file_path)))
+        plexon_interface = PlexonSortingInterface(file_path=plexon_sorting_file_path)
+        data_interfaces.update(dict(Sorting=plexon_interface))
         conversion_options.update(
             dict(Sorting=dict(stub_test=stub_test, units_description="Spike-sorted units from Plexon Offline Sorter."))
         )
@@ -131,7 +167,8 @@ def session_to_nwb(
     trlist_file_paths = list(session_folder_path.glob("*trlist*.mat"))
     if len(trlist_file_paths) == 1:
         trlist_file_path = trlist_file_paths[0]
-        source_data.update(dict(Behavior=dict(file_path=trlist_file_path, trials_key="trlist")))
+        behavior_interface = BehaviorInterface(file_path=trlist_file_path, trials_key="trlist")
+        data_interfaces.update(dict(Behavior=behavior_interface))
         if ttl_code_to_event_name is not None:
             conversion_options.update(dict(Behavior=dict(event_mapping=ttl_code_to_event_name, stub_test=stub_test)))
         else:
@@ -146,11 +183,14 @@ def session_to_nwb(
     fscv_file_paths = list(session_folder_path.glob("*fscv*.mat"))
     if len(fscv_file_paths) == 1:
         fscv_file_path = fscv_file_paths[0]
-        source_data.update(
-            dict(TrialAlignedFSCV=dict(file_path=fscv_file_path, trials_key="c8ds_fscv", sampling_frequency=10.0))
+        trial_aligned_fscv_interface = TrialAlignedFSCVInterface(
+            file_path=fscv_file_path,
+            trials_key="c8ds_fscv",
+            sampling_frequency=10.0,
         )
+        data_interfaces.update(dict(TrialAlignedFSCV=trial_aligned_fscv_interface))
 
-    converter = Amjad2025NWBConverter(source_data=source_data, verbose=verbose)
+    converter = MicroinvasiveProbesNWBConverter(data_interfaces=data_interfaces, verbose=verbose)
 
     # Fetch metadata from converter
     metadata = converter.get_metadata()
@@ -167,6 +207,9 @@ def session_to_nwb(
 
     # Update the ecephys metadata
     metadata["Ecephys"] = editable_metadata["Ecephys"]
+    if "LFP" not in data_interfaces:
+        # pop LFP metadata if no LFP interface
+        metadata["Ecephys"].pop("lfp_series")
 
     subject_metadata = metadata["Subjects"].get(subject_key, None)
     if subject_metadata is None:
@@ -207,6 +250,8 @@ def session_to_nwb(
         conversion_options=conversion_options,
         overwrite=True,
     )
+
+    print(f"Converted NWB file saved to: {nwbfile_path}")
 
 
 if __name__ == "__main__":
