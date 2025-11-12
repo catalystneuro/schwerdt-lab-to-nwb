@@ -67,6 +67,20 @@ class TrialAlignedFSCVInterface(BaseDataInterface):
 
         trials_list_from_mat = read_mat(file_path)
         trials_key = self.source_data["trials_key"]
+
+        # Handle variations in files
+        if "trlists" in trials_list_from_mat and "fscv" in trials_list_from_mat["trlists"]:
+            fscv_entries = trials_list_from_mat["trlists"]["fscv"]
+            # data in expected format
+            dict_fscv_channels = [entry for entry in fscv_entries if isinstance(entry, dict)]
+            num_fscv_channels = len(dict_fscv_channels)
+            if num_fscv_channels == 1:
+                return dict_fscv_channels[0]
+            else:
+                raise ValueError(
+                    f"Expected one FSCV channel in 'trlists.fscv', but found {num_fscv_channels} channels. "
+                )
+
         if trials_key not in trials_list_from_mat:
             raise KeyError(f"Key '{trials_key}' not found in the .mat file.")
 
