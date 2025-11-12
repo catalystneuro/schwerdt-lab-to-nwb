@@ -127,20 +127,37 @@ class TrialAlignedFSCVInterface(BaseDataInterface):
 
         trial_start_times = trials["start_time"][:]
         trial_stop_times = trials["stop_time"][:]
-        for start_time, stop_time in zip(trial_start_times, trial_stop_times):
-            trial_aligned_fscv_table.add_row(start_time=start_time, stop_time=stop_time, rate=self.sampling_frequency)
 
-        # Cast 'good' column to boolean if it exists
+        # Cast 'good' column to boolean if it exists, otherwise assume all trials are good
         if "good" in trial_aligned_data:
-            new_array = np.asarray(trial_aligned_data["good"]).astype(bool).tolist()
+            new_array = [
+                False if isinstance(val, np.ndarray) and val.size == 0 else bool(val)
+                for val in trial_aligned_data["good"]
+            ]
             trial_aligned_data.update(good=new_array)
+        else:
+            new_array = [True] * len(trial_start_times)
 
-        num_trials = len(trials)
+        # Indices of trials marked good
+        good_indices = [i for i, v in enumerate(new_array) if v]
+
+        if not good_indices:
+            raise ValueError("No 'good' trials found to add to the NWB file.")
+
+        # Add rows only for good trials
+        for i in good_indices:
+            trial_aligned_fscv_table.add_row(
+                start_time=trial_start_times[i],
+                stop_time=trial_stop_times[i],
+                rate=self.sampling_frequency,
+            )
+
+        # Add column data only for the selected good trials
         for column_metadata in trial_aligned_fscv_metadata["columns"]:
             trial_aligned_series_name = column_metadata["name"]
             trial_aligned_fscv_table.add_column(
                 **column_metadata,
-                data=trial_aligned_data[trial_aligned_series_name][:num_trials],
+                data=[trial_aligned_data[trial_aligned_series_name][i] for i in good_indices],
             )
 
         processing_module = get_module(
