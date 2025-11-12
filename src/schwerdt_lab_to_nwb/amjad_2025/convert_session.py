@@ -180,7 +180,7 @@ def session_to_nwb(
         warn(f"Expected one trlist file in '{session_folder_path}', found {len(trlist_file_paths)}.")
 
     # Add TrialAlignedFSCV
-    fscv_file_paths = list(session_folder_path.glob("*fscv*.mat"))
+    fscv_file_paths = [fp for fp in session_folder_path.glob("*.mat") if re.search(r"fscv", fp.name, re.IGNORECASE)]
     if len(fscv_file_paths) == 1:
         fscv_file_path = fscv_file_paths[0]
         trial_aligned_fscv_interface = TrialAlignedFSCVInterface(
