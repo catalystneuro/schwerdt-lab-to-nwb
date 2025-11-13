@@ -1,23 +1,39 @@
-# Notes concerning the choi_2025 conversion
+# Notes concerning the amjad_2025 conversion
+
+ The `amjad_2025` conversion converts electrophysiological, fast-scan cyclic voltammetry (FSCV), behavioral, and eye-tracking data
+from experiments conducted in nonhuman primates using microinvasive probes, as described in
+ ["Microinvasive Probes for Monitoring Electrical and Chemical Neural Activity in Nonhuman Primates"](https://www.biorxiv.org/content/10.1101/2025.01.30.635139v1.full.pdf).
 
 ## Data exploration
 
-Example directory structure:
+Example sessions structure:
 
 ```
+data_microinvasiveProbes_manuscript/
 ├── Monkey P
-│ └── cl3_session126_csc12_100_spikes.mat
+│   ├── cl3_session126_csc12_100_spikes.mat
+│   ├── csc12.ncs
+│   └── csc12.plx
 ├── Monkey T
 │ ├── 09132024
-│ │ ├── FSCV_trlists_c8dg_09132024_firsthalf.mat
-│ │ └── rawFSCV_09132024_ts_c8dg_ramp_bin.mat
+│ │  ├── FSCV_trlists_c8dg_09132024_firsthalf.mat
+│ │  ├── rawFSCV_09132024_ts_c8dg_ramp_bin.mat
+│ │  ├── CSC145.ncs
+│ │  ├── CSC146.ncs
+│ │  ├── tr_nlx_eye x.mat
+│ │  ├── tr_nlx_eye y.mat
+│ │  ├── raw fscv with all recorded ch/
+│ │  │   ├── c5c_p4a_p1a_p3b_p2e_p1b_c8ds_c8dg_c8c_c8a_001.mat
+│ │  │   ├── c5c_p4a_p1a_p3b_p2e_p1b_c8ds_c8dg_c8c_c8a_002.mat
+│ │  └── trlists.mat
 │ └── 09262024
-│     ├── 09262024_tr_nlx_c3bs-c3a.mat
-│     ├── 09262024_trlist.mat
-│     ├── CSC37.ncs
-│     ├── CSC37_0001.ncs
-│     ├── CSC38.ncs
-│     └── CSC38_0001.ncs
+│   ├── 09262024_tr_nlx_c3bs-c3a.mat
+│   ├── 09262024_trlist.mat
+│   ├── CSC37.ncs
+│   ├── CSC38.ncs
+│   ├── CSC145.ncs
+│   ├── CSC146.ncs
+│   └── trlists.mat
 └── Notes.txt
 ```
 
@@ -28,26 +44,28 @@ input range of ±1 mV at a sampling frequency of 30 (monkey P) or 32 kHz (monkey
 to 7500 Hz. This system also recorded timestamps of identified task events using 8-bit event codes. The ephys and FSCV
 systems were synchronized by transmitting uniform “trial-start” event codes to both systems, as detailed in previous work.
 
-LFP
+EPhys files for the example session `09262024` from monkey T:
 - `CSC37.ncs` - Raw signals from site c3bs, sampled at 32 kHz, recorded using Neuralynx system.
 - `CSC38.ncs` - Raw signals from site c3a, sampled at 32 kHz, recorded using Neuralynx system.
 - `09262024_tr_nlx_c3bs-c3a.mat` - Processed LFP signals from site c3bs with respect to c3a, sampled at 1000 Hz, aligned to the initial cue start. (30 second mark aligns to initial cue start).
-Spikes
-- `cl3_session126_csc12_100_spikes.mat` - This is the EPhys captured and thresholded spike data from sites ??. Each row contains the initial time stamp for the waveform, the unit ID, followed by the detected waveform samples (48 points long sampled at 32 kHz).
+Spikes for the example session `cl3_session126` from monkey P:
+- `cl3_session126_csc12_100_spikes.mat` - This is the EPhys captured and thresholded spike data from site cl3. Each row contains the initial time stamp for the waveform, the unit ID, followed by the detected waveform samples (48 points long sampled at 32 kHz).
+- `csc12.plx` - Plexon file containing raw signals and spike data from site cl3.
 
 ### FSCV data
 
-- `rawFSCV_09132024_ts_c8dg_ramp_bin.mat` - Raw FSCV data, the frequency of samples recorded was 214 per FSCV scan, and the scan frequency was 10Hz, therefore each one minute recording has 2140*60=128400 samples (rows of each cell)
-- column 1: timestamps from the start of each 1 minute recording. The frequency of samples recorded was 214 per FSCV scan, and the scan frequency was 10Hz, therefore each one minute recording has 2140*60=128400 samples (rows of each cell)
-- column 2: raw fscv potential values (in volts) recorded from site c8dg which is later converted to current
-- column 3: potential of the ramp signal applied in volts
-- column 4: binary data where 1 indicates when a new ramp begins (ramp = scan, 10 ramps per minute)
+- `raw fscv data with all recorded ch/` - Raw FSCV data, the frequency of samples recorded was 214 per FSCV scan, and the scan frequency was 10Hz, therefore each one minute recording has 2140*60=128400 samples (rows of each cell)
+- `c5c_p4a_p1a_p3b_p2e_p1b_c8ds_c8dg_c8c_c8a_001.mat` - each file contains one minute of recording where:
+  - column 1: timestamps from the start of each 1 minute recording. The frequency of samples recorded was 214 per FSCV scan, and the scan frequency was 10Hz, therefore each one minute recording has 2140*60=128400 samples (rows of each cell)
+  - column 2: raw fscv potential values (in volts) recorded from site c8dg which is later converted to current
+  - column 3: potential of the ramp signal applied in volts
+  - column 4: binary data where 1 indicates when a new ramp begins (ramp = scan, 10 ramps per minute)
 
 - `FSCV_trlists_c8dg_09132024_firsthalf.mat` - Processed FSCV data, aligned to behavioral events, fscv contains processed (PCA extracted) signals from the site name that is mentioned in fscvnames (c8dg). eventmap contains information about what each behavioral code in trlist.NlxEventTTL means.
 
 ### Behavioral data
 
-- `09262024_trlist.mat` - Contains behavioral data for each trial in the session. The file includes:
+- `trlists.mat` - Contains behavioral data for each trial in the session. The file includes:
   - `ts`: An array of timestamps for the start of each trial.
   - `type`: An array of trial types or tags.
   - `NlxEventTS`: Nested arrays of event timestamps for each trial.
