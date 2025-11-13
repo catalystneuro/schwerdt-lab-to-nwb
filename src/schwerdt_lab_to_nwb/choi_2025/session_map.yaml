@@ -1,0 +1,13 @@
+Sessions:
+  - neuralynx_folder_path: "/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024"
+    subject_metadata_key: "Monkey T"
+    raw_fscv_recording_folder_path: "/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024/raw fscv data with all recorded ch"
+    fscv_channel_ids_to_brain_area: {6: "c8ds"}  # 0-based indexing (would be channel 7 in MATLAB)
+    lfp_file_path: "/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024/tr_nlx_c7b-c5c.mat"
+    lfp_data_key: "tr_nlx"
+    plexon_file_path:  "/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024/csc23_100.plx"
+    ephys_channel_name_to_brain_area:   {"CSC76": "c5d", "CSC7": "c5c", "CSC47": "c7b",}
+    behavior_trlist_file_path: "/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024/trlists.mat"
+    behavior_trlist_key: "trlist"
+    trial_aligned_fscv_file_path: "/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024/09272024_c8ds_fscv.mat"
+    trial_aligned_fscv_key: "c8ds_fscv"
