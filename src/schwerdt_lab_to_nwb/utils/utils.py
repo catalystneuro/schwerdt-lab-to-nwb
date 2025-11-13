@@ -2,6 +2,8 @@ import datetime
 import re
 from pathlib import Path
 
+from pymatreader import read_mat
+
 
 def convert_unix_timestamps_to_datetime(timestamps: list[float]) -> list[datetime.datetime]:
     """
@@ -83,3 +85,48 @@ def get_channel_index_from_lfp_file_path(lfp_file_path: Path, electrode_location
         return list(electrode_locations).index(first_channel)
     except ValueError:
         raise ValueError(f"Channel {first_channel} not found in electrode locations.")
+
+
+def get_event_codes_from_trlist_file_path(
+    file_path: Path,
+    event_code_rename_map: dict[int, str] | None = None,
+    event_codes_to_skip: list[int] | None = None,
+) -> dict[int, str]:
+    """
+    Extract event codes and their names from a trlist file.
+
+    Parameters
+    ----------
+    file_path : Path
+        Path to the trlist .mat file.
+    event_code_rename_map : dict[int, str], optional
+        Dictionary mapping event codes to new names.
+    event_codes_to_skip : list[int], optional
+        List of event codes to skip.
+
+    Returns
+    -------
+    dict[int, str]
+        Dictionary mapping event codes to their names.
+    """
+    event_code_rename_map = event_code_rename_map or {}
+    event_codes_to_skip = event_codes_to_skip or []
+
+    data = read_mat(file_path)
+    data = data.get("trlists", data)
+    eventmap = data.get("eventmap")
+
+    if not eventmap or "Code" not in eventmap or "Name" not in eventmap:
+        raise ValueError(f"Invalid 'eventmap' structure in file: {file_path}")
+
+    event_codes = {}
+    for code, name in zip(eventmap["Code"], eventmap["Name"]):
+        try:
+            code = int(code)
+        except (TypeError, ValueError):
+            continue  # skip non-numeric codes
+        if code in event_codes_to_skip:
+            continue
+        event_codes[code] = event_code_rename_map.get(code, name)
+
+    return event_codes
