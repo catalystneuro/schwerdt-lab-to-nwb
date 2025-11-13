@@ -1,5 +1,10 @@
 # Notes concerning the choi_2025 conversion
 
+ The `choi_2025` conversion converts electrophysiological, fast-scan cyclic voltammetry (FSCV), behavioral, and eye-tracking data
+from experiments conducted in nonhuman primates using microinvasive probes, as described in
+ ["Aseptic, semi-sealed cranial chamber implants for chronic multi-channel neurochemical and electrophysiological neural recording in nonhuman primates"](https://doi.org/10.1016/j.jneumeth.2025.110467).
+
+
 ## Data exploration
 
 Example session structure:
