@@ -1,0 +1,108 @@
+NWBFile:
+  keywords:
+    - fast scan cyclic voltammetry
+    - micro-invasive neural implant
+    - dopamine
+    - striatum
+  related_publications:
+    - https://doi.org/10.1016/j.jneumeth.2025.110467
+  experiment_description:
+    This experiment contains in vivo recordings of reward- and movement-related dopamine, spikes, and local field potentials
+    obtained using single- and dual-channel shaft-assisted micro-invasive probes (s-µIPs) chronically implanted in the striatum
+    of task-performing rhesus monkeys. The s-µIPs leverage carbon fiber materials to enable dual neurochemical and electrical
+    neural activity recording at micro-invasive (10 µm) spatial footprints near the recording sites, while a wider shaft provides
+    rigidity for deep brain targeting using standard cranial chambers. These probes allow for measurements from deep brain targets
+    with minimal tissue disruption at the recording site. Recordings were made during performance of reward-biased eye movement
+    tasks, enabling simultaneous measurement of dopamine transients, spikes, and local field potentials with micrometer spatial
+    resolution. Chronic implants demonstrated stable, multi-modal neural activity measurements from micro-invasive devices over
+    extended periods post-implantation.
+  session_description:
+    This session includes in vivo recordings of reward- and movement-related dopamine, spikes, and local field potentials
+    obtained using single- and dual-channel micro-invasive neural implants (s-µIPs) chronically implanted in the striatum
+    of task-performing rhesus monkeys. Recordings were made during performance of reward-biased eye movement tasks,
+    enabling simultaneous measurement of neurochemical and electrophysiological activity associated with behavior.
+  institution: University of Pittsburgh
+  lab: Schwerdt
+  experimenter:
+    - Schwerdt, Helen N.
+    - Choi, Jiwon
+  protocol: https://doi.org/10.17504/protocols.io.kqdg32b91v25/v1, https://doi.org/10.17504/protocols.io.x54v92wd4l3e/v1, https://doi.org/10.17504/protocols.io.bp2l62m95gqe/v1
+
+Subjects:
+  Monkey T:
+    subject_id: Monkey T
+    age: P11Y # 11 years in ISO 8601
+    species: Macaca mulatta
+    sex: F
+    description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
+
+Ecephys:
+  Device:
+    - name: device_ecephys
+      description: Neuralynx recording
+  ElectrodeGroup:
+    - name: ElectrodeGroup
+      description: The group of electrodes from the EPhys system (Neuralynx, Digital Lynx SX) implanted in the striatum.
+      location: striatum
+      device: device_ecephys
+  electrical_series:
+    name: electrical_series
+    description: The raw acquisition traces from Neuralynx (Digital Lynx SX) acquired with a unity-gain headstage (Neuralynx, HS-36, ±1 mV input range, at 30 or 32 kHz).
+  lfp_series:
+    name: differential_lfp_series
+    description: Beta-band LFP was computed as a differential signal from bipolar EPhys measurements (Neuralynx, Digital Lynx SX) made by pairs of electrodes, with the signal representing the voltage difference between # sites will be automatically extracted from the file name, no need to insert it here.
+
+# Contains metadata for the raw FSCV data (measured current and applied voltages, sampled at 25kHz)
+FSCV:
+    Device:
+      name: device_ecephys
+      description: Neuralynx recording
+    ElectrodeGroup:
+      name: FSCVElectrodeGroup
+      description: The electrode group for the FSCV electrodes.
+      location: striatum
+      device: device_ecephys
+    FSCVResponseSeries:
+      name: fscv_response_series
+      description: FSCV response current before background subtraction.
+      unit: nanoamperes
+    FSCVExcitationSeries:
+      name: fscv_excitation_series
+      description: FSCV excitation series for applied voltage waveform.
+      unit: volts
+      scan_frequency: 10.0 # in Hz
+      sweep_rate: 400.0 # in V/s
+      waveform_shape: Triangle
+
+Events:
+  AnnotatedEventsTable:
+    name: events_table
+    description: |
+      This table contains the events related to the task performance, including timestamps for task initiation, reward delivery, and other significant behavioral events.
+
+# Contains metadata for trial-aligned FSCV data
+TrialAlignedFSCV:
+  table:
+    name: trial_aligned_fscv_table
+    description: This table contains the results of the Fast-Scan Cyclic Voltammetry (FSCV) analysis, including dopamine concentration time series and related signals (PH, motion, oxidation current).
+  columns:
+    - name: good
+      description: Whether the FSCV data for that trial is considered good quality or not.
+    - name: da
+      description: PCA extracted dopamine concentration time series.
+    - name: ph
+      description: PH change time series.
+    - name: m
+      description: Motion artifact time series.
+    - name: iox
+      description: Measured oxidation current at 0.6 V (approximate voltage at which dopamine oxidizes).
+
+Behavior:
+    EyeTracking:
+      Device:
+        name: device_ecephys
+        description: Neuralynx recording
+      SpatialSeries:
+        name: eye_tracking_series
+        description: Eye position data (x, y) recorded from Neuralynx (Digital Lynx SX).
+        unit: a.u. # arbitrary units
