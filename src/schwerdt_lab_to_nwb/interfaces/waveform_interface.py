@@ -1,3 +1,6 @@
+from warnings import warn
+
+import numpy as np
 import pandas as pd
 from neuroconv import BaseDataInterface
 from neuroconv.tools import get_module
@@ -91,12 +94,27 @@ class WaveformInterface(BaseDataInterface):
         units_table = Units(name="thresholded_units", description=description)
         units_table.add_column(name="unit_name", description="The ID of the unit for each spike.")
 
+        module = get_module(nwbfile, "ecephys", description="Processed electrophysiology data.")
+        module.add(units_table)
+
+        # electrodes reference
+        electrodes_region = None
+        try:
+            electrodes_region = [nwbfile.electrodes["location"][:].index(recording_site)]
+        except ValueError:
+            warn(f"No electrodes found in NWB file for recording site '{recording_site}'.")
+
         # iterate over unique unit ids and add one unit per id
         for uid in sorted(df["unit_id"].unique()):
             unit_rows = df[df["unit_id"] == uid]
             spike_times = unit_rows["spike_time"].to_numpy()
             waveforms = unit_rows[[c for c in df.columns if c.startswith("waveform_sample_")]].to_numpy()
-            units_table.add_unit(spike_times=spike_times.tolist(), waveforms=waveforms, unit_name=str(int(uid)))
-
-        ecephys = get_module(nwbfile, "ecephys", description="Processed electrophysiology data.")
-        ecephys.add(units_table)
+            waveforms = waveforms[
+                ..., np.newaxis
+            ]  # the last dimension is for channels, from the file examples we assume they are from the same channel
+            units_table.add_unit(
+                unit_name=str(int(uid)),
+                spike_times=spike_times.tolist(),
+                waveforms=waveforms,
+                electrodes=electrodes_region,
+            )
