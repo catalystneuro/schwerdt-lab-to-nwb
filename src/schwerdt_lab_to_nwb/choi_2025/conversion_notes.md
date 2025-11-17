@@ -108,3 +108,11 @@ container containing one `SpatialSeries` that stores the continuous gaze positio
 **Files and code reference**
 Raw Neuralynx CSC files: `CSC145.ncs` (y) and `CSC146.ncs` (x).
 Implementation: `src/schwerdt_lab_to_nwb/interfaces/eye_tracking_interface.py` (EyeTrackingBehaviorInterface).
+
+## Spikes
+
+Spike data is stored in two locations within the NWB file:
+
+- **Spike-sorted data from Plexon**: This data is added to the main units table under `nwbfile.units`.
+
+- **Thresholded spike data from .mat files (e.g., `csc23_100_40uv.mat`)**: This data is added to a separate `Units` table within the processed ephys data module (`ecephys`). Each row in this table includes the spike times for each unit ID, with their detected waveform samples. This table is accessible via `nwbfile.processing["ecephys"].data_interfaces["thresholded_units"]`.
