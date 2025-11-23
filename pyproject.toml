@@ -15,19 +15,22 @@ classifiers = [
 ]
 
 dependencies = [
-  "neuroconv",
-  "nwbinspector",
+    "neuroconv[neuralynx, plexon]==0.8.2",   # Pinned dependencies to specific versions
+    "spikeinterface",
+    "nwbinspector",
+    "pymatreader",
+    "ndx-fscv==0.1.0",
+    "ndx-events==0.2.1",
+    "dandi",
+    "remfile",
+    "ipykernel",
+    "jupyter",
+    "tqdm",
+    "tabulate",
 ]
 
 [project.urls]
 Repository="https://github.com/catalystneuro/schwerdt-lab-to-nwb"
-
-[project.optional-dependencies]
-amjad_2025 = [
-    "neuroconv[neuralynx]==0.7.5",   # Pinned dependencies to specific versions
-    "pymatreader",
-    "ndx-events==0.2.1",
-]
 
 [build-system]
 requires = ["setuptools"]
