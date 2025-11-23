@@ -49,13 +49,33 @@ def session_to_nwb(
     nwb_folder_path : DirectoryPath
         The directory path where the converted NWB file will be saved.
         The file will be named 'sub-{subject_id}_ses-{session_id}.nwb'.
+    metadata_yaml_file_path : FilePath
+        Path to the YAML file containing metadata for the NWB file.
     subject_metadata_key : str
         The subject key to look for in the metadata under 'Subjects' section (e.g. "Monkey T", "Monkey P").
+    session_id : str, optional
+        The session ID to use in the NWB file. If not provided, the name of the neuralynx_folder_path will be used.
+    raw_fscv_recording_folder_path :
+        Path to the folder containing raw FSCV recording .mat files.
+    fscv_channel_ids_to_brain_area : dict[int, str]
+        A dictionary mapping FSCV channel IDs (0-based indexing) to brain areas.
+    lfp_file_path : FilePath | None, optional
+        Path to the differential LFP signal file (.mat) for the session.
+    lfp_data_key : str, optional
+        Key in the .mat file that contains the LFP data, by default "tr_nlx".
+    plexon_file_path : FilePath | None, optional
+        Path to the Plexon Offline Sorter file (.plx) for spike sorting data.
     ephys_channel_name_to_brain_area : dict[str, str] | None, optional
         A dictionary mapping EPhys channel names to brain areas.
         If provided, the brain area will be set for each channel in the NWB file.
-    fscv_channel_ids_to_brain_area : dict[int, str]
-        A dictionary mapping FSCV channel IDs (1-based indexing) to brain areas.
+    behavior_trlist_file_path : FilePath | None, optional
+        Path to the behavior trlist .mat file for the session.
+    behavior_trlist_key : str, optional
+        Key in the .mat file that contains the behavior trials data, by default "trlist".
+    trial_aligned_fscv_file_path : FilePath | None, optional
+        Path to the trial-aligned FSCV .mat file for the session.
+    trial_aligned_fscv_key : str, optional
+        Key in the .mat file that contains the trial-aligned FSCV data, by default "c8ds_fscv".
     ttl_code_to_event_name : dict[int, str] | None, optional
         A dictionary mapping TTL event codes to event names.
     stub_test : bool, optional
