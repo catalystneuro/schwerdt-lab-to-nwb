@@ -18,6 +18,8 @@ Before installation, ensure you have the following tools installed:
 
 ### Installation steps
 
+#### Installation using conda
+
 From a terminal (note that conda should install one in your system) you can do the following:
 
 ```
@@ -31,6 +33,8 @@ This creates a [conda environment](https://docs.conda.io/projects/conda/en/lates
 We recommend that you run all your conversion related tasks and analysis from the created environment in order to
 minimize issues related to package dependencies.
 
+#### Installation to an existing environment
+
 Alternatively, if you want to avoid conda altogether (for example if you use another virtual environment tool) you
 can install the repository with the following commands using only pip:
 
@@ -41,6 +45,15 @@ pip install --editable .
 ```
 Note: both of the methods above install the repository in [editable mode](https://pip.pypa.io/en/stable/cli/pip_install/#editable-installs).
 The dependencies for this environment are stored in the dependencies section of the `pyproject.toml` file.
+
+#### Installation from frozen requirements
+
+If you want to install the exact versions of the dependencies used during development, you can install the frozen
+requirements from the `frozen_requirements.txt` file into an existing environment using pip:
+
+```
+pip install -r frozen_requirements.txt
+```
 
 ## Data Organization and Conversion Process
 
