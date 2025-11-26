@@ -159,7 +159,11 @@ class BehaviorInterface(BaseDataInterface):
 
         timeseries = None
         if "ecephys" in nwbfile.processing:
-            timeseries = nwbfile.processing["ecephys"]["FilteredEphys"]["differential_lfp_series"]
+            filtered_ephys_module = nwbfile.processing["ecephys"]["FilteredEphys"]
+            if "bipolar_lfp_series" in filtered_ephys_module.electrical_series:
+                timeseries = filtered_ephys_module["bipolar_lfp_series"]
+            else:
+                warn("No 'bipolar_lfp_series' found in 'FilteredEphys' module to link to trials.")
 
         trial_types = trials_data["type"][:num_trials]
         nwbfile.add_trial_column(name="midpoint_time", description="The midpoint time of the trial in seconds.")
