@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     yaml_file_path = Path(__file__).parent / "session_map.yaml"
     metadata_yaml_file_path = Path(__file__).parent / "metadata.yaml"
-    output_dir_path = Path("/Users/weian/data/Schwerdt/nwbfiles/data_microinvasiveProbes_manuscript/")
+    output_dir_path = Path("/Users/weian/data/Schwerdt/nwbfiles/data_chamber_manuscript/")
 
     verbose = True
     stub_test = False  # Set to True for quick testing with limited data

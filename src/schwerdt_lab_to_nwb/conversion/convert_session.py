@@ -1,6 +1,3 @@
-"""Primary script to run to convert an entire session for of data using the NWBConverter."""
-
-import re
 from logging import warn
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -8,7 +5,6 @@ from zoneinfo import ZoneInfo
 from natsort import natsorted
 from neuroconv.datainterfaces import NeuralynxRecordingInterface, PlexonSortingInterface
 from neuroconv.utils import dict_deep_update, load_dict_from_file
-from pydantic import DirectoryPath
 from spikeinterface.extractors import NeuralynxRecordingExtractor
 
 from schwerdt_lab_to_nwb.converters import MicroinvasiveProbesNWBConverter
@@ -22,35 +18,64 @@ from schwerdt_lab_to_nwb.interfaces import (
 
 
 def session_to_nwb(
-    session_folder_path: DirectoryPath,
-    nwb_folder_path: DirectoryPath,
-    subject_key: str,
+    neuralynx_folder_path: Path | str,
+    nwb_folder_path: Path | str,
+    metadata_yaml_file_path: Path | str,
+    subject_metadata_key: str,
     session_id: str = None,
+    raw_fscv_recording_folder_path: Path | str = None,
     fscv_channel_ids_to_brain_area: dict[int, str] | None = None,
+    lfp_file_path: Path | str = None,
+    lfp_data_key: str = "tr_nlx",
+    plexon_file_path: Path | str = None,
     ephys_channel_name_to_brain_area: dict[str, str] | None = None,
+    behavior_trlist_file_path: Path | str = None,
+    behavior_trlist_key: str = "trlist",
     ttl_code_to_event_name: dict[int, str] | None = None,
+    trial_aligned_fscv_file_path: Path | str = None,
+    trial_aligned_fscv_key: str = "c8ds_fscv",
     stub_test: bool = False,
     verbose: bool = False,
 ):
     """
-    Convert a single session from Amjad 2025 dataset to NWB format.
+    Convert a single session to NWB format.
 
     Performs the conversion of extracellular electrophysiology data from Neuralynx format to NWB format.
 
     Parameters
     ----------
-    session_folder_path : DirectoryPath
+    neuralynx_folder_path : DirectoryPath
         Path to the directory containing the Neuralynx data files (.ncs) for the session.
     nwb_folder_path : DirectoryPath
         The directory path where the converted NWB file will be saved.
         The file will be named 'sub-{subject_id}_ses-{session_id}.nwb'.
-    subject_key : str
+    metadata_yaml_file_path : FilePath
+        Path to the YAML file containing metadata for the NWB file.
+    subject_metadata_key : str
         The subject key to look for in the metadata under 'Subjects' section (e.g. "Monkey T", "Monkey P").
+    session_id : str, optional
+        The session ID to use in the NWB file. If not provided, the name of the neuralynx_folder_path will be used.
+    raw_fscv_recording_folder_path :
+        Path to the folder containing raw FSCV recording .mat files.
+    fscv_channel_ids_to_brain_area : dict[int, str]
+        A dictionary mapping FSCV channel IDs (0-based indexing) to brain areas.
+    lfp_file_path : FilePath | None, optional
+        Path to the differential LFP signal file (.mat) for the session.
+    lfp_data_key : str, optional
+        Key in the .mat file that contains the LFP data, by default "tr_nlx".
+    plexon_file_path : FilePath | None, optional
+        Path to the Plexon Offline Sorter file (.plx) for spike sorting data.
     ephys_channel_name_to_brain_area : dict[str, str] | None, optional
         A dictionary mapping EPhys channel names to brain areas.
         If provided, the brain area will be set for each channel in the NWB file.
-    fscv_channel_ids_to_brain_area : dict[int, str]
-        A dictionary mapping FSCV channel IDs (1-based indexing) to brain areas.
+    behavior_trlist_file_path : FilePath | None, optional
+        Path to the behavior trlist .mat file for the session.
+    behavior_trlist_key : str, optional
+        Key in the .mat file that contains the behavior trials data, by default "trlist".
+    trial_aligned_fscv_file_path : FilePath | None, optional
+        Path to the trial-aligned FSCV .mat file for the session.
+    trial_aligned_fscv_key : str, optional
+        Key in the .mat file that contains the trial-aligned FSCV data, by default "c8ds_fscv".
     ttl_code_to_event_name : dict[int, str] | None, optional
         A dictionary mapping TTL event codes to event names.
     stub_test : bool, optional
@@ -59,7 +84,7 @@ def session_to_nwb(
         Whether to print progress messages during conversion, by default False.
     """
 
-    session_folder_path = Path(session_folder_path)
+    session_folder_path = Path(neuralynx_folder_path)
     session_id = session_id or session_folder_path.name
     nwb_folder_path = Path(nwb_folder_path)
     if stub_test:
@@ -126,11 +151,16 @@ def session_to_nwb(
             conversion_options.update(dict(EyeTracking=dict(stub_test=stub_test)))
 
     # Add FSCV Recording
-    if fscv_channel_ids_to_brain_area is not None:
+    if raw_fscv_recording_folder_path is not None:
+        raw_fscv_recording_folder_path = Path(raw_fscv_recording_folder_path)
+        assert (
+            fscv_channel_ids_to_brain_area is not None
+        ), "'fscv_channel_ids_to_brain_area' must be provided when 'raw_fscv_recording_folder_path' is specified."
         channel_indices = list(fscv_channel_ids_to_brain_area.keys())
         if len(channel_indices) == 1:
             brain_area = fscv_channel_ids_to_brain_area[channel_indices[0]]
-            file_paths = natsorted(session_folder_path.parent.rglob(f"raw*/*{brain_area}*.mat"))
+
+            file_paths = natsorted(raw_fscv_recording_folder_path.glob(f"*{brain_area}*.mat"))
             if len(file_paths):
                 fscv_recording_interface = FSCVRecordingInterface(
                     file_paths=file_paths,
@@ -139,53 +169,46 @@ def session_to_nwb(
                 )
                 data_interfaces.update(dict(FSCVRecording=fscv_recording_interface))
                 conversion_options.update(dict(FSCVRecording=dict(conversion_factor=1e9 / 4.99e6, stub_test=stub_test)))
+            else:
+                warn(
+                    f"No raw FSCV recording files found for brain area '{brain_area}' in '{raw_fscv_recording_folder_path}'."
+                )
 
     # Add LFP
-    lfp_file_paths = list(session_folder_path.glob("*.mat"))
-    lfp_file_paths = [fp for fp in lfp_file_paths if re.match(r".*tr_nlx_[a-zA-Z0-9]+-[a-zA-Z0-9]+\.mat$", fp.name)]
-    if len(lfp_file_paths) == 1:
-        lfp_file_path = lfp_file_paths[0]
+    if lfp_file_path is not None:
         lfp_interface = NlxLfpRecordingInterface(
             file_path=lfp_file_path,
-            trials_key="tr_nlx",
+            trials_key=lfp_data_key,
             sampling_frequency=1000.0,
         )
         data_interfaces.update(dict(LFP=lfp_interface))
         conversion_options.update(dict(LFP=dict(stub_test=stub_test)))
 
     # Add Sorting
-    plexon_sorting_file_paths = list(session_folder_path.glob("csc*.plx"))
-    if len(plexon_sorting_file_paths) == 1:
-        plexon_sorting_file_path = plexon_sorting_file_paths[0]
-        plexon_interface = PlexonSortingInterface(file_path=plexon_sorting_file_path)
+    if plexon_file_path is not None:
+        plexon_interface = PlexonSortingInterface(file_path=plexon_file_path)
         data_interfaces.update(dict(Sorting=plexon_interface))
         conversion_options.update(
             dict(Sorting=dict(stub_test=stub_test, units_description="Spike-sorted units from Plexon Offline Sorter."))
         )
 
     # Add Behavior
-    trlist_file_paths = list(session_folder_path.glob("*trlist*.mat"))
-    if len(trlist_file_paths) == 1:
-        trlist_file_path = trlist_file_paths[0]
-        behavior_interface = BehaviorInterface(file_path=trlist_file_path, trials_key="trlist")
+    if behavior_trlist_file_path is not None:
+        behavior_interface = BehaviorInterface(file_path=behavior_trlist_file_path, trials_key=behavior_trlist_key)
         data_interfaces.update(dict(Behavior=behavior_interface))
         if ttl_code_to_event_name is not None:
             conversion_options.update(dict(Behavior=dict(event_mapping=ttl_code_to_event_name, stub_test=stub_test)))
         else:
             raise ValueError(
-                f"TTL code to event name mapping is required when '{trlist_file_path}' is specified. "
+                f"TTL code to event name mapping is required when '{behavior_trlist_file_path}' is specified. "
                 "Please provide this mapping using the 'event_mapping' argument."
             )
-    else:
-        warn(f"Expected one trlist file in '{session_folder_path}', found {len(trlist_file_paths)}.")
 
     # Add TrialAlignedFSCV
-    fscv_file_paths = [fp for fp in session_folder_path.glob("*.mat") if re.search(r"fscv", fp.name, re.IGNORECASE)]
-    if len(fscv_file_paths) == 1:
-        fscv_file_path = fscv_file_paths[0]
+    if trial_aligned_fscv_file_path is not None:
         trial_aligned_fscv_interface = TrialAlignedFSCVInterface(
-            file_path=fscv_file_path,
-            trials_key="c8ds_fscv",
+            file_path=trial_aligned_fscv_file_path,
+            trials_key=trial_aligned_fscv_key,
             sampling_frequency=10.0,
         )
         data_interfaces.update(dict(TrialAlignedFSCV=trial_aligned_fscv_interface))
@@ -201,8 +224,7 @@ def session_to_nwb(
     metadata["NWBFile"].update(session_start_time=session_start_time)
 
     # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent / "metadata.yaml"
-    editable_metadata = load_dict_from_file(editable_metadata_path)
+    editable_metadata = load_dict_from_file(metadata_yaml_file_path)
     metadata = dict_deep_update(metadata, editable_metadata)
 
     # Update the ecephys metadata
@@ -211,11 +233,11 @@ def session_to_nwb(
         # pop LFP metadata if no LFP interface
         metadata["Ecephys"].pop("lfp_series")
 
-    subject_metadata = metadata["Subjects"].get(subject_key, None)
+    subject_metadata = metadata["Subjects"].get(subject_metadata_key, None)
     if subject_metadata is None:
         raise ValueError(
-            f"Subject '{subject_key}' is not found in the metadata. "
-            f"Please add an entry for this subject to '{editable_metadata_path}' under the 'Subjects' section."
+            f"Subject '{subject_metadata_key}' is not found in the metadata. "
+            f"Please add an entry for this subject to '{metadata_yaml_file_path}' under the 'Subjects' section."
         )
     metadata["Subject"] = subject_metadata
 
@@ -252,99 +274,3 @@ def session_to_nwb(
     )
 
     print(f"Converted NWB file saved to: {nwbfile_path}")
-
-
-if __name__ == "__main__":
-
-    # Parameters for conversion
-    data_dir_path = Path("/Users/weian/data/Schwerdt/additional data/data_chamber_manuscript/09272024")
-    output_dir_path = Path("/Users/weian/data/Schwerdt/nwbfiles")
-    stub_test = True
-
-    # Define brain areas for each channel using a dictionary
-    # TODO extras this from 'recording sites.xlsx' when available
-    ephys_channel_name_to_brain_area = {
-        "CSC37": "c3bs",
-        "CSC38": "c3a",
-        "csc23": "c5d",
-        "csc12": "cl3",
-        "CSC7": "c5c",
-        "CSC47": "c7b",
-    }
-
-    fscv_channel_ids_to_brain_area = {
-        6: "c8ds",  # 0-based indexing (would be channel 7 in MATLAB)
-    }
-
-    # TODO: Extract this from file when available
-    # 40, 41, 0 missing from trlists.eventmap can be skipped
-    event_code_dict = {
-        # 9: "start trial", code 9 can be skipped
-        12: "frame skipped",
-        14: "manual reward",
-        18: "end trial",
-        21: "feedback",
-        23: "value object start",
-        24: "central cue end",
-        26: "forced forced value cue start",
-        27: "forced forced value cue only",
-        28: "onedr",
-        30: "left cue reward condition 1",
-        31: "left cue reward condition 2",
-        32: "left cue reward condition 3",
-        33: "left cue reward condition 4",
-        34: "left cue reward condition 5",
-        35: "right cue reward condition 1",
-        36: "right cue reward condition 2",
-        37: "right cue reward condition 3",
-        38: "right cue reward condition 4",
-        39: "right cue reward condition 5",
-        50: "central cue fixation started",
-        51: "value cue fixation started",
-        52: "forced trial valuecue fix allowed",
-        53: "forced trial valuecue fix started",
-        60: "error fixation break target",
-        61: "error fixation break initial",
-        62: "error fixation never started",
-        63: "error fixation break central cue value object",
-        64: "error choice never made",
-        65: "error choice value initial fix break",
-        66: "error choice fixbreak right",
-        67: "error choice fixbreak left",
-        68: "error forced trial value cue fix never started",
-        69: "error forced trial value cue fix break",
-        81: "image 1",
-        82: "image 2",
-        83: "image 3",
-        84: "image 4",
-        85: "image 5",
-        86: "image 6",
-        87: "image 7",
-        88: "image 8",
-        89: "image 9",
-        90: "image 10",
-        100: "small reward",
-        101: "big reward",
-        102: "airpuff on",
-        103: "airpuff off",
-        105: "reward delivery end",
-        115: "transient value condition",
-        116: "fixed value condition",
-        117: "left condition",
-        118: "right condition",
-        119: "forced trial condition",
-        120: "choice trial condition",
-        121: "right choice chosen code",
-        122: "left choice chosen code",
-        128: "trial start",  # or initial central cue start
-    }
-
-    session_to_nwb(
-        session_folder_path=data_dir_path,
-        nwb_folder_path=output_dir_path,
-        subject_key="Monkey T",
-        ephys_channel_name_to_brain_area=ephys_channel_name_to_brain_area,
-        fscv_channel_ids_to_brain_area=fscv_channel_ids_to_brain_area,
-        ttl_code_to_event_name=event_code_dict,
-        stub_test=stub_test,
-    )
