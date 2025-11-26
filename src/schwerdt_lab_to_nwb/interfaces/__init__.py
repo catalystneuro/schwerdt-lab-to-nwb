@@ -4,6 +4,7 @@ from .fscv_interface import FSCVRecordingInterface
 from .lfp_interface import NlxLfpRecordingInterface
 from .neuralynx_gap_mode_interface import NeuralynxConcatenateSegmentRecordingInterface
 from .trial_aligned_fscv_interface import TrialAlignedFSCVInterface
+from .waveform_interface import WaveformInterface
 
 __all__ = [
     "BehaviorInterface",
@@ -12,4 +13,5 @@ __all__ = [
     "TrialAlignedFSCVInterface",
     "EyeTrackingBehaviorInterface",
     "NeuralynxConcatenateSegmentRecordingInterface",
+    "WaveformInterface",
 ]

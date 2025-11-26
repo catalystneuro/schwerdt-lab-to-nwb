@@ -2,6 +2,8 @@ Sessions:
   - neuralynx_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey P"
     subject_metadata_key: "Monkey P"
     plexon_file_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey P/csc12.plx"
+    spikes_file_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey P/cl3_session126_csc12_100_spikes.mat"
+    spikes_data_key: "csc12_100"
     ephys_channel_name_to_brain_area: {CSC12: "cl3"}
     session_id: 08132018
   - neuralynx_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey T/09132024"

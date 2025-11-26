@@ -28,6 +28,8 @@ def session_to_nwb(
     lfp_file_path: Path | str = None,
     lfp_data_key: str = "tr_nlx",
     plexon_file_path: Path | str = None,
+    spikes_file_path: Path | str = None,
+    spikes_data_key: str = "csc12_100",
     ephys_channel_name_to_brain_area: dict[str, str] | None = None,
     behavior_trlist_file_path: Path | str = None,
     behavior_trlist_key: str = "trlist",
@@ -190,6 +192,33 @@ def session_to_nwb(
         data_interfaces.update(dict(Sorting=plexon_interface))
         conversion_options.update(
             dict(Sorting=dict(stub_test=stub_test, units_description="Spike-sorted units from Plexon Offline Sorter."))
+        )
+
+    # Add Waveforms
+    if spikes_file_path is not None:
+        from schwerdt_lab_to_nwb.interfaces import WaveformInterface
+
+        file_name = Path(spikes_file_path).stem.lower()
+        recording_sites = list(ephys_channel_name_to_brain_area.keys())
+        matching_site = next((site for site in recording_sites if site.lower() in file_name), None)
+        if matching_site is None:
+            warn(
+                f"Spikes file name '{file_name}' does not match any recording site in "
+                f"the provided 'ephys_channel_name_to_brain_area' keys: {recording_sites}."
+            )
+        waveform_interface = WaveformInterface(
+            file_path=spikes_file_path,
+            spikes_data_key=spikes_data_key,
+            sampling_frequency=neuralynx_extractor.get_sampling_frequency(),
+            verbose=verbose,
+        )
+        data_interfaces.update(dict(Waveforms=waveform_interface))
+        conversion_options.update(
+            dict(
+                Waveforms=dict(
+                    recording_site=ephys_channel_name_to_brain_area.get(matching_site, "unknown"),
+                )
+            )
         )
 
     # Add Behavior
