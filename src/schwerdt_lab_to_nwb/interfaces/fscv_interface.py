@@ -122,7 +122,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         Parameters
         ----------
         conversion_factor : float
-            Factor to convert raw signal (V) to current (A).
+            Factor to convert raw signal (V) to current (A). The conversion is done by multiplying the raw signal by this factor.
         stub_test : bool, default: False
             If True, only a subset of the data is read for testing purposes.
 
@@ -153,7 +153,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         excitation_series = np.concatenate(applied_voltages)
         measured_voltages = np.concatenate(channels)
         # Conversion: raw signal (V) → current (A)
-        response_series = measured_voltages / conversion_factor
+        response_series = measured_voltages * conversion_factor
 
         return excitation_series, response_series
 
