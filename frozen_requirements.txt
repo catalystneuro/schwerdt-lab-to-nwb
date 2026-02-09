@@ -90,7 +90,7 @@ more-itertools==10.8.0
 multidict==6.7.0
 natsort==8.4.0
 nbclient==0.10.2
-nbconvert==7.16.6
+nbconvert==7.17.0
 nbformat==5.10.4
 ndx-events==0.2.1
 ndx-fscv==0.1.0
