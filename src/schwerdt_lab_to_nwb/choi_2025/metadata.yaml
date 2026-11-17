@@ -49,7 +49,7 @@ Ecephys:
   spike_times_note: "Almost no spikes fall in a window of about 10 ms in each 100 ms FSCV cycle, around the scan artifact. Whether spikes there were removed or not detected is not documented."
   lfp_series:
     name: bipolar_lfp_series
-    description: "Bipolar LFP at 1 kHz, in volts. The source data are 60 s windows around each trial, joined here into one series with NaN in the gaps. The preprocessing (filters, line-noise removal) is not documented."
+    description: "Bipolar LFP at 1 kHz, in volts. The source data are 60 s windows around each trial, joined here into one series, with each time stored once. The preprocessing (filters, line-noise removal) is not documented."
 
 # Contains metadata for the raw FSCV data (measured current and applied voltages, sampled at 25kHz)
 FSCV:
@@ -63,11 +63,11 @@ FSCV:
       device: device_ecephys
     FSCVResponseSeries:
       name: fscv_response_series
-      description: FSCV response current before background subtraction.
+      description: "FSCV response current before background subtraction. Scan times are mapped to the session clock from the scan times in the trial list, to within about one scan (0.1 s)."
       unit: amperes
     FSCVExcitationSeries:
       name: fscv_excitation_series
-      description: FSCV excitation series for applied voltage waveform.
+      description: "FSCV excitation series for applied voltage waveform. Scan times are mapped to the session clock from the scan times in the trial list, to within about one scan (0.1 s)."
       unit: volts
       scan_frequency: 10.0 # in Hz
       sweep_rate: 400.0 # in V/s

@@ -134,6 +134,18 @@ def test_lfp_trial_windows_are_joined_without_close_timestamps(tmp_path, monkeyp
     assert np.sum(signal == 3.0) == num_samples
 
 
+def test_lfp_gaps_between_trial_windows_are_counted(monkeypatch):
+    fs = 1000.0
+    # The second 60 s window starts 10 s after the first one ends
+    lfp_per_trial = [np.zeros(60_000), np.ones(60_000)]
+    interface = NlxLfpRecordingInterface.__new__(NlxLfpRecordingInterface)
+    interface.source_data = dict(sampling_frequency=fs)
+    monkeypatch.setattr(interface, "read_data", lambda: lfp_per_trial)
+
+    _, signal = interface.reconstruct_continuous_signal_from_trials(trial_start_times=[100.0, 170.0])
+    assert interface._num_gap_samples == np.isnan(signal).sum() > 0
+
+
 def test_thresholded_waveforms_are_in_volts_and_spikes_sorted(tmp_path):
     rows = np.array(
         [

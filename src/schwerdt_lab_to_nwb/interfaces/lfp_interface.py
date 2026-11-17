@@ -185,6 +185,7 @@ class NlxLfpRecordingInterface(BaseDataInterface):
 
         continuous_signal_parts = []
         continuous_time_parts = []
+        self._num_gap_samples = 0  # samples inserted as NaN between trial windows that do not touch
 
         for i, trial_data in enumerate(lfp_per_trial):
             trial_start = trial_start_times[i] - time_offset  # since trial starts 30 seconds in
@@ -209,6 +210,7 @@ class NlxLfpRecordingInterface(BaseDataInterface):
                 if gap > 1 / fs:
                     # Insert NaNs for gaps
                     n_gap = int(np.round(gap * fs))
+                    self._num_gap_samples += n_gap
                     continuous_signal_parts.append(np.full(n_gap, np.nan))
                     continuous_time_parts.append(last_timestamp + np.arange(1, n_gap + 1) / fs)
                     mask = middle_time > last_timestamp
@@ -281,7 +283,13 @@ class NlxLfpRecordingInterface(BaseDataInterface):
         )
         lfp_metadata = metadata["Ecephys"][self.es_key]
 
-        new_description = f"{lfp_metadata['description']} Site {site} referenced to site {reference_site}."
+        if self._num_gap_samples:
+            joining_note = f"Gaps between windows are filled with NaN ({self._num_gap_samples} samples)."
+        else:
+            joining_note = "Consecutive windows overlap, so the series has no gaps."
+        new_description = (
+            f"{lfp_metadata['description']} {joining_note} Site {site} referenced to site {reference_site}."
+        )
 
         lfp_electrical_series = ElectricalSeries(
             name=lfp_metadata["name"],
@@ -289,7 +297,7 @@ class NlxLfpRecordingInterface(BaseDataInterface):
             data=lfp_traces,
             electrodes=lfp_electrodes,
             timestamps=timestamps,
-            # The lab's LFP is already in volts
+            # The source values are already in volts
             conversion=1.0,
         )
         container = FilteredEphys(electrical_series=lfp_electrical_series)
