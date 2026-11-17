@@ -105,8 +105,8 @@ class WaveformInterface(BaseDataInterface):
         unit_descriptions = {-1: "-1 (poor-quality spikes)", 0: "0 (unsorted spikes)"}
         present_units = ", ".join(unit_descriptions.get(uid, str(uid)) for uid in sorted(set(unit_ids.tolist())))
         description = (
-            f"Spikes captured by threshold crossing on the Neuralynx recording of site {recording_site}, as provided "
-            f"by the lab. Units in this table: {present_units}. Each spike has its time and its waveform "
+            f"Spikes captured by threshold crossing on the Neuralynx recording of site {recording_site}. Units in this "
+            f"table: {present_units}. Each spike has its time and its waveform "
             f"({num_waveform_samples} samples at {rate} Hz, converted from microvolts to volts). Spike times are "
             f"sorted within each unit."
         )
@@ -119,7 +119,7 @@ class WaveformInterface(BaseDataInterface):
             description += f" {description_note}"
 
         units_table = Units(name="thresholded_units", description=description, waveform_rate=float(rate))
-        units_table.add_column(name="unit_name", description="The unit ID in the lab's file.")
+        units_table.add_column(name="unit_name", description="The unit ID in the source data.")
 
         module = get_module(nwbfile, "ecephys", description="Processed electrophysiology data.")
         module.add(units_table)

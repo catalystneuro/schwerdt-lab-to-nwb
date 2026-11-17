@@ -133,7 +133,7 @@ class TrialAlignedFSCVInterface(BaseDataInterface):
 
         trial_aligned_fscv_table_metadata = dict(trial_aligned_fscv_metadata["table"])
         trial_aligned_fscv_table_metadata["description"] += (
-            f" The lab's file has FSCV data for {len(trial_indices)} of the {num_trials} trials; "
+            f" The source data have FSCV values for {len(trial_indices)} of the {num_trials} trials; "
             "the table has one row for each of them."
         )
         trial_aligned_fscv_table = TimeIntervals(**trial_aligned_fscv_table_metadata)

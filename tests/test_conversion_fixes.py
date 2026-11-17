@@ -270,3 +270,77 @@ def test_trials_and_events_describe_windows_missing_trials_and_reward_codes(monk
     events = nwbfile.processing["events"]["events_table"].to_dataframe().set_index("label")
     assert events.loc["condition 1", "event_description"].endswith("got the big reward.")
     assert events.loc["start", "event_description"] == "The event times for code 128."
+
+
+def test_events_with_code_0_are_kept(monkeypatch):
+    from schwerdt_lab_to_nwb.interfaces import BehaviorInterface
+
+    trial_start = SESSION_START_EPOCH + 100.0
+    trials_data = dict(
+        ts=np.array([trial_start]),
+        type=["initial cue display"],
+        NlxEventTS=[trial_start + np.array([0.0, 0.05, 1.0, 1.05])],
+        NlxEventTTL=[np.array([128, 0, 41, 0])],
+    )
+    interface = BehaviorInterface.__new__(BehaviorInterface)
+    monkeypatch.setattr(interface, "read_data", lambda: trials_data)
+
+    nwbfile = mock_NWBFile(session_start_time=SESSION_START)
+    metadata = dict(
+        NWBFile=dict(session_start_time=SESSION_START),
+        Events=dict(AnnotatedEventsTable=dict(name="events_table", description="Task events.")),
+    )
+    interface.add_events_to_nwbfile(nwbfile=nwbfile, metadata=metadata, event_mapping={128: "start"})
+
+    events_table = nwbfile.processing["events"]["events_table"]
+    assert events_table.description == "Task events."
+    assert list(events_table["label"][:]) == ["TTL code 0", "TTL code 41", "start"]
+    assert len(events_table["event_times"][0]) == 2
+
+
+def test_plexon_events_table_describes_the_plexon_codes(monkeypatch):
+    from schwerdt_lab_to_nwb.interfaces import PlexonEventsInterface
+
+    interface = PlexonEventsInterface.__new__(PlexonEventsInterface)
+    interface.source_data = dict(file_path="csc12.plx")
+    interface._starting_time = 0.0
+    monkeypatch.setattr(interface, "read_events", lambda: (np.array([1.0, 1.05, 2.0]), np.array([9, 0, 18])))
+
+    nwbfile = mock_NWBFile(session_start_time=SESSION_START)
+    # The description of the trial list sessions does not apply to the Plexon codes
+    metadata = dict(Events=dict(AnnotatedEventsTable=dict(name="events_table", description="Named by the event map.")))
+    interface.add_to_nwbfile(nwbfile=nwbfile, metadata=metadata)
+
+    events_table = nwbfile.processing["events"]["events_table"]
+    assert "csc12.plx" in events_table.description
+    assert "event map" not in events_table.description
+    assert list(events_table["label"][:]) == ["TTL code 0", "TTL code 9", "TTL code 18"]
+
+
+def test_eye_tracking_is_written_in_volts_as_x_and_y():
+    from spikeinterface.core import NumpyRecording
+
+    from schwerdt_lab_to_nwb.interfaces import EyeTrackingBehaviorInterface
+
+    # The channels are stored as (y, x) in ADC counts
+    counts = np.array([[100, -200], [300, -400]], dtype="int16")
+    recording = NumpyRecording(traces_list=[counts], sampling_frequency=32000.0, channel_ids=["CSC145", "CSC146"])
+    recording.set_channel_gains(3.0517578125)
+    recording.set_channel_offsets(0.0)
+    interface = EyeTrackingBehaviorInterface.__new__(EyeTrackingBehaviorInterface)
+    interface.extractor_eye_tracking = recording
+
+    nwbfile = mock_NWBFile(session_start_time=SESSION_START)
+    metadata = dict(
+        Behavior=dict(
+            EyeTracking=dict(
+                Device=dict(name="device_ecephys"),
+                SpatialSeries=dict(name="eye_tracking_series", description="Eye position.", unit="volts"),
+            )
+        )
+    )
+    interface.add_to_nwbfile(nwbfile=nwbfile, metadata=metadata)
+
+    spatial_series = nwbfile.acquisition["EyeTracking"].spatial_series["eye_tracking_series"]
+    assert spatial_series.unit == "volts"
+    np.testing.assert_allclose(spatial_series.data[:] * spatial_series.conversion, counts[:, [1, 0]] * 3.0517578125e-6)

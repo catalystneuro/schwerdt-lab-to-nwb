@@ -231,13 +231,12 @@ class BehaviorInterface(BaseDataInterface):
         event_mapping: dict,
         metadata: dict | None = None,
         stub_test: bool = False,
-        event_codes_to_skip: tuple[int, ...] = (0,),
     ) -> None:
         """
         Adds event data to the NWB file using an AnnotatedEventsTable.
 
         Each event is stored once, with the times of each code sorted. Codes without a name in 'event_mapping' are
-        stored as 'TTL code <code>'. Code 0 (the TTL line returning to zero between codes) is skipped by default.
+        stored as 'TTL code <code>'.
 
         Parameters
         ----------
@@ -253,10 +252,6 @@ class BehaviorInterface(BaseDataInterface):
         from ndx_events import AnnotatedEventsTable
 
         annotated_events_metadata = metadata["Events"]["AnnotatedEventsTable"]
-        annotated_events = AnnotatedEventsTable(
-            name=annotated_events_metadata["name"],
-            description=annotated_events_metadata["description"],
-        )
         session_start_time = None
         if "session_start_time" in metadata["NWBFile"]:
             session_start_time = metadata["NWBFile"]["session_start_time"]
@@ -275,13 +270,15 @@ class BehaviorInterface(BaseDataInterface):
         )
         event_descriptions = metadata["Events"].get("event_descriptions", dict())
 
+        annotated_events = AnnotatedEventsTable(
+            name=annotated_events_metadata["name"], description=annotated_events_metadata["description"]
+        )
+
         for event_code, event_times in event_code_to_times.items():
-            if event_code in event_codes_to_skip:
-                continue
             label = event_mapping.get(event_code)
             if label is None:
                 label = f"TTL code {event_code}"
-                event_description = f"The event times for code {event_code}, which is not in the lab's event map."
+                event_description = f"The event times for code {event_code}, which is not in the event map."
             else:
                 event_description = f"The event times for code {event_code}."
             if event_code in event_descriptions:

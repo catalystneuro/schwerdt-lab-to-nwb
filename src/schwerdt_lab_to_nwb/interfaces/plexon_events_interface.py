@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from neuroconv.basedatainterface import BaseDataInterface
 from neuroconv.tools import get_module
@@ -37,20 +39,21 @@ class PlexonEventsInterface(BaseDataInterface):
         times = reader.rescale_event_timestamp(timestamps, dtype="float64", event_channel_index=0)
         return times, labels.astype(int)
 
-    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict, event_codes_to_skip: tuple[int, ...] = (0,)) -> None:
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict) -> None:
         from ndx_events import AnnotatedEventsTable
 
         times, codes = self.read_events()
         times = times + self._starting_time
 
-        annotated_events_metadata = metadata["Events"]["AnnotatedEventsTable"]
+        description = (
+            f"Task events from the strobed event codes of the Plexon file ({Path(self.source_data['file_path']).name}). "
+            "No code map is available for this session, so each event is named 'TTL code <code>'. Each event is "
+            "stored once, in time order."
+        )
         annotated_events = AnnotatedEventsTable(
-            name=annotated_events_metadata["name"],
-            description=annotated_events_metadata["description"],
+            name=metadata["Events"]["AnnotatedEventsTable"]["name"], description=description
         )
         for code in np.unique(codes):
-            if code in event_codes_to_skip:
-                continue
             annotated_events.add_event_type(
                 label=f"TTL code {code}",
                 event_description=f"The event times for code {code}. The code map for this session is not available.",

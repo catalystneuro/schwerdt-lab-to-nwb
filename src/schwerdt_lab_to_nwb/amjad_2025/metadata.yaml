@@ -21,7 +21,8 @@ NWBFile:
     In vivo recordings of dopamine, spikes and local field potentials from micro-invasive probes (s-µIPs) chronically
     implanted in the striatum of rhesus monkeys performing reward-biased eye movement tasks. Times are in seconds from
     the session start. In the 2024 sessions this is when the Neuralynx recording was opened. In the 2018 session
-    (Monkey P) times follow the Neuralynx acquisition clock, which counts from the start of the acquisition software.
+    (Monkey P) times follow the Neuralynx acquisition clock, which counts from the start of the acquisition software, at least 49 s before the session start time (when the
+    recording file was created).
   institution: University of Pittsburgh
   lab: Schwerdt
   experimenter:
@@ -118,5 +119,5 @@ Behavior:
         description: Neuralynx recording
       SpatialSeries:
         name: eye_tracking_series
-        description: Eye position (x, y) recorded with Neuralynx (Digital Lynx SX).
-        unit: a.u. # arbitrary units
+        description: "Uncalibrated eye position signal (x, y) in volts, recorded with Neuralynx (Digital Lynx SX). x is channel CSC146 and y is channel CSC145, as in the session notes; the channel list of the trial list names them the other way round."
+        unit: volts

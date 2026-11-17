@@ -48,9 +48,9 @@ Spikes
 - `raw fscv data with all recorded ch/` - Raw FSCV data, the frequency of samples recorded was 214 per FSCV scan, and the scan frequency was 10Hz, therefore each one minute recording has 2140*60=128400 samples (rows of each cell)
 - `c8c_c8ds_c8a_c9a_c8dg_001.mat` - each file contains one minute of recording where:
   - column 1: timestamps from the start of each 1 minute recording. The frequency of samples recorded was 214 per FSCV scan, and the scan frequency was 10Hz, therefore each one minute recording has 2140*60=128400 samples (rows of each cell)
-  - column 2: raw fscv potential values (in volts) recorded from site c8dg which is later converted to current
-  - column 3: potential of the ramp signal applied in volts
-  - column 4: binary data where 1 indicates when a new ramp begins (ramp = scan, 10 ramps per minute)
+  - column 2: potential of the ramp signal applied, in volts
+  - columns 3 to 18: the recorded channels, in volts, later converted to current; site c8ds is column 7
+  - column 19: binary data where 1 marks the centre of a 60 s trial window
 
 ### Behavioral data
 
@@ -98,7 +98,7 @@ To ensure that behavioral events and trial information are accurately aligned wi
 5. All timestamps are converted to relative times (seconds) from the session start time, which is set to the start of the Neuralynx recording.
 
 **Code reference:**
-- The alignment logic is implemented in `Amjad2025NWBConverter.temporally_align_data_interfaces`, which finds all trial-start events in each trial, then selects the timestamp closest to the intended trial start from `trlist.ts`.
+- The alignment logic is implemented in `MicroinvasiveProbesNWBConverter.temporally_align_data_interfaces`, which finds all trial-start events in each trial, then selects the timestamp closest to the intended trial start from `trlist.ts`.
 - The `BehaviorInterface` then uses these aligned times when adding trials and events to the NWB file.
 
 This approach guarantees that behavioral, ephys, and FSCV data are temporally synchronized for downstream analysis.
@@ -129,7 +129,7 @@ https://github.com/catalystneuro/schwerdt-lab-to-nwb/issues/30 and https://githu
 ### Eye tracking
 
 Raw eye-tracking signals recorded by the Neuralynx system are imported and stored in the NWB acquisition as an `EyeTracking`
-container containing one `SpatialSeries` that stores the continuous gaze position time series (x, y).
+container containing one `SpatialSeries` that stores the continuous, uncalibrated eye position signal (x, y) in volts.
 
 **Files and code reference**
 Raw Neuralynx CSC files: `CSC145.ncs` (y) and `CSC146.ncs` (x).
@@ -155,11 +155,31 @@ Spike data is stored in two locations within the NWB file:
 - Thresholded spikes: waveforms are converted from microvolts to volts, spike times are sorted within each unit, and
   spikes before the first raw sample are left out (7 in Monkey P).
 - Events: each event is stored once (the trial windows overlap) with sorted times. Codes 9, 40 and 41 are kept; codes
-  that are not in the lab's event map are stored as `TTL code <code>`. Only code 0 is skipped. For Monkey P, the
+  that are not in the event map are stored as `TTL code <code>`. For Monkey P, the
   strobed event codes of `csc12.plx` are stored by code, since no code map is available for that session.
-- LFP: written with `conversion=1.0`, since the lab's values are already in volts. Joined trial windows keep at least
+- LFP: written with `conversion=1.0`, since the source values are already in volts. Joined trial windows keep at least
   half a sample between timestamps. The description no longer calls it beta-band.
 - Raw FSCV: stored in nanoamperes with `conversion=1e-9`, so it reads as amperes.
-- Trial-aligned FSCV: one row for every trial with data, with `good` as given by the lab and a `trial_index` column.
+- Trial-aligned FSCV: one row for every trial with data, with `good` as in the source data and a `trial_index` column.
 - The raw series description gives the DSP filter settings from the .ncs headers (high cut 8000 Hz in the 2024
   sessions, 7500 Hz for Monkey P).
+
+## Changes after the second reproduction review (issue #32)
+
+- Units: both units tables have `resolution` set to the sample period of the Neuralynx recording. The Plexon units
+  are linked to the electrode of the site named in the `.plx` file name.
+- Trials: each row is a 60 s window centred on the trial start event (code 128), as in the source data, so
+  consecutive windows overlap. The table description says so and lists trial start events that have no row.
+- Events: the reward condition codes are described from the reward events of the session. Code 0 is no longer
+  skipped; it is stored as `TTL code 0` (826 events in Monkey P, where it occurs once per trial). For Monkey P the
+  table describes the Plexon event codes.
+- Eye tracking: written as stored (ADC counts) with the conversion to volts from the .ncs header. x is `CSC146.ncs`
+  and y is `CSC145.ncs`, following the session notes. `trlists.nlxnames` and the files `tr_nlx_eye x.mat` and
+  `tr_nlx_eye y.mat` name the two channels the other way round (`tr_nlx_eye x.mat` holds CSC145), which is an open
+  question for the lab.
+- Monkey P clock: the times count from the start of the acquisition software. The last sample is at 18786.083 s,
+  which is 49 s after the file was closed if counted from the session start time (the time the file was created),
+  so the clock started at least 49 s before the session start time.
+- Not converted: `trlists.fscv` of 09262024 holds trial-aligned FSCV for sites c9a, c8a, c8c, c8dg and c8ds. The
+  publication uses only the LFP of this session, and the notes of 09272024 ask to keep unpublished FSCV sites out
+  of the public data.
