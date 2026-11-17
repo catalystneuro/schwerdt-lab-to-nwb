@@ -94,7 +94,7 @@ nbconvert==7.16.6
 nbformat==5.10.4
 ndx-events==0.2.1
 ndx-fscv==0.1.0
-neo==0.14.3
+neo==0.14.6
 nest-asyncio==1.6.0
 neuroconv==0.8.2
 notebook==7.5.0
