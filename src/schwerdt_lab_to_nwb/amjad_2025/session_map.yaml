@@ -2,12 +2,15 @@ Sessions:
   - neuralynx_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey P"
     subject_metadata_key: "Monkey P"
     plexon_file_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey P/csc12.plx"
+    plexon_channel_names: ["csc12_100"]  # csc5_100 is not documented or published by the lab
     spikes_file_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey P/cl3_session126_csc12_100_spikes.mat"
     spikes_data_key: "csc12_100"
     ephys_channel_name_to_brain_area: {CSC12: "cl3"}
     session_id: 08132018
   - neuralynx_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey T/09132024"
     subject_metadata_key: "Monkey T"
+    # No Neuralynx files for this session; the start of the Neuralynx recording, as in the published files
+    session_start_time: "2024-09-13T09:03:06"
     raw_fscv_recording_folder_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey T/09132024/raw fscv with all recorded ch"
     fscv_channel_ids_to_brain_area: {10: "c8dg"} # 0-based indexing (would be channel 11 in MATLAB)
     trial_aligned_fscv_file_path: "/Users/weian/data/Schwerdt/additional data/data_microinvasiveProbes_manuscript/Monkey T/09132024/FSCV_trlists_c8dg_09132024_firsthalf.mat"

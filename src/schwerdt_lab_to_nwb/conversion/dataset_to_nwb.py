@@ -69,7 +69,7 @@ def get_session_to_nwb_kwargs_per_session(
             ttl_code_to_event_name = get_event_codes_from_trlist_file_path(
                 file_path=trlist_file_path,
                 event_code_rename_map={128: "intended trial start"},
-                event_codes_to_skip=[0, 9, 40, 41],
+                event_codes_to_skip=[0],
             )
 
         # resolve session folder path; allow relative paths (relative to data_dir_path)

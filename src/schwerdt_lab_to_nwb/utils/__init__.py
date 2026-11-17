@@ -1,13 +1,33 @@
 from .utils import (
     convert_timestamps_to_relative_timestamps,
     convert_unix_timestamps_to_datetime,
+    drop_spikes_before,
     get_channel_index_from_lfp_file_path,
     get_event_codes_from_trlist_file_path,
+    get_fscv_to_session_time,
+    get_neuralynx_record_samples,
+    get_neuralynx_sample_times,
+    get_neuralynx_sampling_frequency,
+    get_neuralynx_starting_time,
+    get_sorted_plexon_sorting,
+    get_unique_sorted_event_times,
+    neuralynx_timestamps_are_epoch,
+    set_sampling_frequency,
 )
 
 __all__ = [
     "convert_unix_timestamps_to_datetime",
     "convert_timestamps_to_relative_timestamps",
+    "drop_spikes_before",
     "get_channel_index_from_lfp_file_path",
     "get_event_codes_from_trlist_file_path",
+    "get_fscv_to_session_time",
+    "get_neuralynx_record_samples",
+    "get_neuralynx_sample_times",
+    "get_neuralynx_sampling_frequency",
+    "get_neuralynx_starting_time",
+    "get_sorted_plexon_sorting",
+    "get_unique_sorted_event_times",
+    "neuralynx_timestamps_are_epoch",
+    "set_sampling_frequency",
 ]

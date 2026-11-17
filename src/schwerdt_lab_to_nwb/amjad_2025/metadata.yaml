@@ -5,6 +5,7 @@ NWBFile:
     - dopamine
     - striatum
   related_publications:
+    - https://doi.org/10.1021/acschemneuro.5c00071
     - https://doi.org/10.1101/2025.01.30.635139
   experiment_description:
     This experiment contains in vivo recordings of reward- and movement-related dopamine, spikes, and local field potentials
@@ -17,10 +18,10 @@ NWBFile:
     resolution. Chronic implants demonstrated stable, multi-modal neural activity measurements from micro-invasive devices over
     extended periods post-implantation.
   session_description:
-    This session includes in vivo recordings of reward- and movement-related dopamine, spikes, and local field potentials
-    obtained using single- and dual-channel micro-invasive neural implants (s-µIPs) chronically implanted in the striatum
-    of task-performing rhesus monkeys. Recordings were made during performance of reward-biased eye movement tasks,
-    enabling simultaneous measurement of neurochemical and electrophysiological activity associated with behavior.
+    In vivo recordings of dopamine, spikes and local field potentials from micro-invasive probes (s-µIPs) chronically
+    implanted in the striatum of rhesus monkeys performing reward-biased eye movement tasks. Times are in seconds from
+    the session start. In the 2024 sessions this is when the Neuralynx recording was opened. In the 2018 session
+    (Monkey P) times follow the Neuralynx acquisition clock, which counts from the start of the acquisition software.
   institution: University of Pittsburgh
   lab: Schwerdt
   experimenter:
@@ -34,13 +35,13 @@ Subjects:
     age: P11Y # 11 years in ISO 8601
     species: Macaca mulatta
     sex: F
-    description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
+    description: Adult female rhesus monkey with chronic s-µIP implants in the striatum.
   Monkey P:
     subject_id: Monkey P
     age: P8Y # 8 years in ISO 8601
     species: Macaca mulatta
     sex: F
-    description: Two adult female rhesus monkeys were used for in vivo validation of the s-µIP device, with chronic implants targeting the striatum for simultaneous FSCV and EPhys recordings during behavioral tasks.
+    description: Adult female rhesus monkey with chronic s-µIP implants in the striatum.
 
 Ecephys:
   Device:
@@ -48,15 +49,15 @@ Ecephys:
       description: Neuralynx recording
   ElectrodeGroup:
     - name: ElectrodeGroup
-      description: The group of electrodes from the EPhys system (Neuralynx, Digital Lynx SX) implanted in the striatum.
+      description: Electrodes implanted in the striatum, recorded with Neuralynx (Digital Lynx SX).
       location: striatum
       device: device_ecephys
   electrical_series:
     name: electrical_series
-    description: The raw acquisition traces from Neuralynx (Digital Lynx SX) acquired with a unity-gain headstage (Neuralynx, HS-36, ±1 mV input range, at 30 or 32 kHz).
+    description: Raw Neuralynx (Digital Lynx SX) traces acquired at 30 kHz (Monkey P) or 32 kHz (Monkey T) with a unity-gain headstage (HS-36, ±1 mV input range).
   lfp_series:
     name: bipolar_lfp_series
-    description: Beta-band LFP was computed from bipolar EPhys measurements (Neuralynx, Digital Lynx SX) made by pairs of electrodes, with the signal representing the voltage difference between # sites will be automatically extracted from the file name, no need to insert it here.
+    description: "Bipolar LFP at 1 kHz, in volts. The source data are 60 s windows around each trial, joined here into one series with NaN in the gaps. The signal is broadband, with narrow spectral dips at multiples of 10 Hz. The preprocessing (filters, line-noise removal) is not documented."
 
 # Contains metadata for the raw FSCV data (measured current and applied voltages, sampled at 25kHz)
 FSCV:
@@ -71,7 +72,7 @@ FSCV:
     FSCVResponseSeries:
       name: fscv_response_series
       description: FSCV response current before background subtraction.
-      unit: nanoamperes
+      unit: amperes
     FSCVExcitationSeries:
       name: fscv_excitation_series
       description: FSCV excitation series for applied voltage waveform.
@@ -83,25 +84,24 @@ FSCV:
 Events:
   AnnotatedEventsTable:
     name: events_table
-    description: |
-      This table contains the events related to the task performance, including timestamps for task initiation, reward delivery, and other significant behavioral events.
+    description: "Task events from the 8-bit Neuralynx event codes, named by the event map of the trial list. Each event is stored once, in time order. Codes missing from the event map are named 'TTL code <code>'."
 
 # Contains metadata for trial-aligned FSCV data
 TrialAlignedFSCV:
   table:
     name: trial_aligned_fscv_table
-    description: This table contains the results of the Fast-Scan Cyclic Voltammetry (FSCV) analysis, including dopamine concentration time series and related signals (PH, motion, oxidation current).
+    description: "Trial-aligned FSCV analysis: PCA-extracted dopamine, pH and motion components and the oxidation current. Each series has 601 samples at 10 Hz, from 30 s before to 30 s after the trial midpoint. The units and the reference window of the components are not given in the source data."
   columns:
     - name: good
-      description: Whether the FSCV data for that trial is considered good quality or not.
+      description: "Quality flag of the trial, from the source data."
     - name: da
-      description: PCA extracted dopamine concentration time series.
+      description: "PCA-extracted dopamine component. Units unknown."
     - name: ph
-      description: PH change time series.
+      description: "PCA-extracted pH component. Units unknown."
     - name: m
-      description: Motion artifact time series.
+      description: "PCA-extracted motion artifact component. Units unknown."
     - name: iox
-      description: Measured oxidation current at 0.6 V (approximate voltage at which dopamine oxidizes).
+      description: "Oxidation current at about 0.6 V, where dopamine oxidizes. Units unknown."
 
 Behavior:
     EyeTracking:
@@ -110,5 +110,5 @@ Behavior:
         description: Neuralynx recording
       SpatialSeries:
         name: eye_tracking_series
-        description: Eye position data (x, y) recorded from Neuralynx (Digital Lynx SX).
+        description: Eye position (x, y) recorded with Neuralynx (Digital Lynx SX).
         unit: a.u. # arbitrary units

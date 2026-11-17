@@ -122,7 +122,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         Parameters
         ----------
         conversion_factor : float
-            Factor to convert raw signal (V) to current (A). The conversion is done by multiplying the raw signal by this factor.
+            Factor to convert the raw signal (V) to current (nA). The raw signal is multiplied by this factor.
         stub_test : bool, default: False
             If True, only a subset of the data is read for testing purposes.
 
@@ -131,7 +131,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         tuple[np.ndarray, np.ndarray]
             A tuple containing:
             - excitation_series: Array of applied voltages (V).
-            - response_series: Array of measured currents (A).
+            - response_series: Array of measured currents (nA).
         """
         applied_voltages = []
         channels = []
@@ -152,7 +152,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
 
         excitation_series = np.concatenate(applied_voltages)
         measured_voltages = np.concatenate(channels)
-        # Conversion: raw signal (V) → current (A)
+        # Conversion: raw signal (V) → current (nA)
         response_series = measured_voltages * conversion_factor
 
         return excitation_series, response_series
@@ -202,7 +202,7 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         metadata : dict
             Metadata for the FSCV data.
         conversion_factor : float
-            Factor to convert raw signal (V) to current (A).
+            Factor to convert the raw signal (V) to current (nA).
         stub_test : bool, default: False
             If True, only a subset of the data is processed for testing purposes.
         """
@@ -276,7 +276,10 @@ class FSCVRecordingInterface(BaseTemporalAlignmentInterface):
         response_series_obj = FSCVResponseSeries(
             data=response_series,
             timestamps=timestamps,
-            current_to_voltage_factor=1 / conversion_factor,
+            # The data are in nanoamperes (raw voltage times conversion_factor); 'conversion' scales them to amperes
+            conversion=1e-9,
+            # Gain of the current-to-voltage converter in V/A
+            current_to_voltage_factor=1e9 / conversion_factor,
             electrodes=fscv_electrodes,
             excitation_series=excitation_series_obj,
             **response_series_metadata,

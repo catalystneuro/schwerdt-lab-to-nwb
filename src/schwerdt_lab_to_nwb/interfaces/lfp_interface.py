@@ -213,11 +213,14 @@ class NlxLfpRecordingInterface(BaseDataInterface):
                     continuous_time_parts.append(last_timestamp + np.arange(1, n_gap + 1) / fs)
                     mask = middle_time > last_timestamp
                 else:
-                    # Remove overlapping samples
-                    overlap = trial_time[margin] - trial_time[0]
-                    mask = middle_time > last_timestamp - overlap
-                    continuous_signal_parts[-1] = continuous_signal_parts[-1][:-margin]
-                    continuous_time_parts[-1] = continuous_time_parts[-1][:-margin]
+                    # Remove overlapping samples: drop the margin at the end of the previous part, then keep only the
+                    # samples of this trial that come at least half a sample after the last kept one. The trial
+                    # windows are not on one common sample grid, so the two parts would otherwise interleave or
+                    # leave timestamps a few microseconds apart at the junction.
+                    if margin:
+                        continuous_signal_parts[-1] = continuous_signal_parts[-1][:-margin]
+                        continuous_time_parts[-1] = continuous_time_parts[-1][:-margin]
+                    mask = middle_time > continuous_time_parts[-1][-1] + 0.5 / fs
 
                 continuous_signal_parts.append(middle_data[mask])
                 continuous_time_parts.append(middle_time[mask])
@@ -268,25 +271,26 @@ class NlxLfpRecordingInterface(BaseDataInterface):
             lfp_file_path=Path(self.source_data["file_path"]),
             electrode_locations=electrode_locations,
         )
+        # The file name ends with the bipolar pair, e.g. '..._c3bs-c3a.mat'
+        site, reference_site = Path(self.source_data["file_path"]).stem.split("_")[-1].split("-")
+        # One electrode per data column: the region holds the site, and names its reference
         lfp_electrodes = nwbfile.electrodes.create_region(
             name="electrodes",
             region=[channel_id],
-            description="LFP electrodes table region",
+            description=f"The electrode of site {site}; the signal is referenced to site {reference_site}.",
         )
-        raw_electrical_series = nwbfile.acquisition["electrical_series"]
         lfp_metadata = metadata["Ecephys"][self.es_key]
 
-        default_description = lfp_metadata["description"]
-        new_description = (
-            default_description + f" site {electrode_locations[0]} with respect to {electrode_locations[1]}."
-        )
+        new_description = f"{lfp_metadata['description']} Site {site} referenced to site {reference_site}."
+
         lfp_electrical_series = ElectricalSeries(
             name=lfp_metadata["name"],
             description=new_description,
             data=lfp_traces,
             electrodes=lfp_electrodes,
             timestamps=timestamps,
-            conversion=raw_electrical_series.conversion,
+            # The lab's LFP is already in volts
+            conversion=1.0,
         )
         container = FilteredEphys(electrical_series=lfp_electrical_series)
         ecephys_module = get_module(

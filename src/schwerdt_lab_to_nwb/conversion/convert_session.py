@@ -1,3 +1,4 @@
+import datetime
 from logging import warn
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -13,8 +14,29 @@ from schwerdt_lab_to_nwb.interfaces import (
     EyeTrackingBehaviorInterface,
     FSCVRecordingInterface,
     NlxLfpRecordingInterface,
+    PlexonEventsInterface,
     TrialAlignedFSCVInterface,
 )
+from schwerdt_lab_to_nwb.utils import get_sorted_plexon_sorting
+
+
+def get_neuralynx_filter_description(recording_interface) -> str:
+    """Describe the Neuralynx DSP filter settings of the recorded channels, from their .ncs headers."""
+    neuralynx_extractor = getattr(recording_interface, "neuralynx_extractor", recording_interface.recording_extractor)
+    neo_reader = neuralynx_extractor.neo_reader
+    channel_names = set(neuralynx_extractor.get_property("channel_name"))
+    settings = {
+        (
+            neo_reader.file_headers[file_path]["DspLowCutFrequency"],
+            neo_reader.file_headers[file_path]["DspHighCutFrequency"],
+        )
+        for (channel_name, _), file_path in neo_reader.ncs_filenames.items()
+        if channel_name in channel_names
+    }
+    if len(settings) != 1:
+        raise ValueError(f"Expected one filter setting for the recorded channels, found {settings}.")
+    ((low_cut, high_cut),) = settings
+    return f" Neuralynx DSP filters (from the .ncs headers): low cut {low_cut} Hz, high cut {high_cut} Hz."
 
 
 def session_to_nwb(
@@ -23,11 +45,13 @@ def session_to_nwb(
     metadata_yaml_file_path: Path | str,
     subject_metadata_key: str,
     session_id: str = None,
+    session_start_time: str | None = None,
     raw_fscv_recording_folder_path: Path | str = None,
     fscv_channel_ids_to_brain_area: dict[int, str] | None = None,
     lfp_file_path: Path | str = None,
     lfp_data_key: str = "tr_nlx",
     plexon_file_path: Path | str = None,
+    plexon_channel_names: list[str] | None = None,
     spikes_file_path: Path | str = None,
     spikes_data_key: str = "csc12_100",
     ephys_channel_name_to_brain_area: dict[str, str] | None = None,
@@ -57,6 +81,9 @@ def session_to_nwb(
         The subject key to look for in the metadata under 'Subjects' section (e.g. "Monkey T", "Monkey P").
     session_id : str, optional
         The session ID to use in the NWB file. If not provided, the name of the neuralynx_folder_path will be used.
+    session_start_time : str | None, optional
+        The session start time (ISO format, New York local time) for a session without Neuralynx files, whose
+        start time cannot be read from a Neuralynx header.
     raw_fscv_recording_folder_path :
         Path to the folder containing raw FSCV recording .mat files.
     fscv_channel_ids_to_brain_area : dict[int, str]
@@ -67,6 +94,9 @@ def session_to_nwb(
         Key in the .mat file that contains the LFP data, by default "tr_nlx".
     plexon_file_path : FilePath | None, optional
         Path to the Plexon Offline Sorter file (.plx) for spike sorting data.
+    plexon_channel_names : list[str] | None, optional
+        The Plexon channels whose units are written (e.g. ['csc12_100']). All units are written by default.
+        When the session has no behavior trlist, the strobed event codes of the .plx file are written as events.
     ephys_channel_name_to_brain_area : dict[str, str] | None, optional
         A dictionary mapping EPhys channel names to brain areas.
         If provided, the brain area will be set for each channel in the NWB file.
@@ -189,10 +219,19 @@ def session_to_nwb(
     # Add Sorting
     if plexon_file_path is not None:
         plexon_interface = PlexonSortingInterface(file_path=plexon_file_path)
-        data_interfaces.update(dict(Sorting=plexon_interface))
-        conversion_options.update(
-            dict(Sorting=dict(stub_test=stub_test, units_description="Spike-sorted units from Plexon Offline Sorter."))
+        plexon_interface.sorting_extractor = get_sorted_plexon_sorting(
+            sorting_extractor=plexon_interface.sorting_extractor, channel_names=plexon_channel_names
         )
+        data_interfaces.update(dict(Sorting=plexon_interface))
+        channels = ", ".join(plexon_channel_names) if plexon_channel_names else "all channels"
+        units_description = (
+            f"Spike-sorted units from Plexon Offline Sorter ({Path(plexon_file_path).name}, {channels}). "
+            "Units are named by their Plexon id 'ch<channel>#<unit>'; unit #0 holds the spikes Plexon left unsorted. "
+            "Spike times are sorted within each unit."
+        )
+        conversion_options.update(dict(Sorting=dict(stub_test=stub_test, units_description=units_description)))
+        if behavior_trlist_file_path is None:
+            data_interfaces.update(dict(PlexonEvents=PlexonEventsInterface(file_path=plexon_file_path)))
 
     # Add Waveforms
     if spikes_file_path is not None:
@@ -246,7 +285,12 @@ def session_to_nwb(
 
     # Fetch metadata from converter
     metadata = converter.get_metadata()
-    session_start_time = metadata["NWBFile"]["session_start_time"]
+    if session_start_time is not None:
+        if has_neuralynx:
+            raise ValueError("'session_start_time' is only for sessions without Neuralynx files.")
+        session_start_time = datetime.datetime.fromisoformat(session_start_time)
+    else:
+        session_start_time = metadata["NWBFile"]["session_start_time"]
 
     # Add datetime to conversion
     session_start_time = session_start_time.replace(tzinfo=ZoneInfo("America/New_York"))
@@ -261,6 +305,10 @@ def session_to_nwb(
     if "LFP" not in data_interfaces:
         # pop LFP metadata if no LFP interface
         metadata["Ecephys"].pop("lfp_series")
+    if "Recording" in data_interfaces:
+        metadata["Ecephys"]["electrical_series"]["description"] += get_neuralynx_filter_description(
+            recording_interface=data_interfaces["Recording"]
+        )
 
     subject_metadata = metadata["Subjects"].get(subject_metadata_key, None)
     if subject_metadata is None:

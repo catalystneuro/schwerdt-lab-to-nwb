@@ -1,7 +1,6 @@
 from warnings import warn
 
 import numpy as np
-import pandas as pd
 from neuroconv import BaseDataInterface
 from neuroconv.tools import get_module
 from pydantic import FilePath
@@ -38,6 +37,16 @@ class WaveformInterface(BaseDataInterface):
 
         super().__init__(file_path=file_path, spikes_data_key=spikes_data_key, sampling_frequency=sampling_frequency)
         self.verbose = verbose
+        self._starting_time = 0.0
+        self._first_sample_time = None
+
+    def set_aligned_starting_time(self, aligned_starting_time: float) -> None:
+        """Shift the spike times in the file by this time in seconds to place them on the session clock."""
+        self._starting_time = aligned_starting_time
+
+    def set_first_sample_time(self, first_sample_time: float) -> None:
+        """Set the session time of the first raw Neuralynx sample; spikes before it are left out."""
+        self._first_sample_time = first_sample_time
 
     def read_spikes_file(self):
         """Read spike data from a .mat file."""
@@ -72,49 +81,54 @@ class WaveformInterface(BaseDataInterface):
         metadata: dict | None,
         recording_site: str,
     ) -> None:
-        """Add waveform data to the NWB file."""
+        """Add the thresholded spikes and their waveforms to the NWB file, one unit per unit ID in the file."""
         spikes_data = self.read_spikes_file()
 
-        waveforms = spikes_data[:, 2:]
+        spike_times = spikes_data[:, 0] + self._starting_time
+        unit_ids = spikes_data[:, 1].astype(int)
+        # The lab's waveforms are in microvolts; the NWB Units table stores waveforms in volts
+        waveforms = spikes_data[:, 2:] * 1e-6
+
+        num_dropped = 0
+        if self._first_sample_time is not None:
+            keep = spike_times >= self._first_sample_time
+            num_dropped = int((~keep).sum())
+            spike_times, unit_ids, waveforms = spike_times[keep], unit_ids[keep], waveforms[keep]
 
         num_waveform_samples = waveforms.shape[1]
         rate = self.source_data["sampling_frequency"]
+        unit_descriptions = {-1: "-1 (poor-quality spikes)", 0: "0 (unsorted spikes)"}
+        present_units = ", ".join(unit_descriptions.get(uid, str(uid)) for uid in sorted(set(unit_ids.tolist())))
         description = (
-            f"EPhys captured and thresholded spike data from site {recording_site}. "
-            f"Each row contains the initial time stamp for the waveform, the unit ID "
-            f"(-1 indicates a poor-quality spike), followed by the detected waveform "
-            f"samples ({num_waveform_samples}) points long sampled at {rate} Hz)."
+            f"Spikes captured by threshold crossing on the Neuralynx recording of site {recording_site}, as provided "
+            f"by the lab. Units in this table: {present_units}. Each spike has its time and its waveform "
+            f"({num_waveform_samples} samples at {rate} Hz, converted from microvolts to volts). Spike times are "
+            f"sorted within each unit."
         )
+        if num_dropped:
+            description += (
+                f" {num_dropped} spikes with times before the first sample of the raw recording were left out."
+            )
 
-        df = pd.DataFrame(
-            spikes_data,
-            columns=["spike_time", "unit_id"] + [f"waveform_sample_{i}" for i in range(num_waveform_samples)],
-        )
-
-        units_table = Units(name="thresholded_units", description=description)
-        units_table.add_column(name="unit_name", description="The ID of the unit for each spike.")
+        units_table = Units(name="thresholded_units", description=description, waveform_rate=float(rate))
+        units_table.add_column(name="unit_name", description="The unit ID in the lab's file.")
 
         module = get_module(nwbfile, "ecephys", description="Processed electrophysiology data.")
         module.add(units_table)
 
-        # electrodes reference
         electrodes_region = None
         try:
             electrodes_region = [nwbfile.electrodes["location"][:].index(recording_site)]
         except ValueError:
             warn(f"No electrodes found in NWB file for recording site '{recording_site}'.")
 
-        # iterate over unique unit ids and add one unit per id
-        for uid in sorted(df["unit_id"].unique()):
-            unit_rows = df[df["unit_id"] == uid]
-            spike_times = unit_rows["spike_time"].to_numpy()
-            waveforms = unit_rows[[c for c in df.columns if c.startswith("waveform_sample_")]].to_numpy()
-            waveforms = waveforms[
-                ..., np.newaxis
-            ]  # the last dimension is for channels, from the file examples we assume they are from the same channel
+        for uid in sorted(set(unit_ids.tolist())):
+            in_unit = np.flatnonzero(unit_ids == uid)
+            order = in_unit[np.argsort(spike_times[in_unit], kind="stable")]
             units_table.add_unit(
-                unit_name=str(int(uid)),
-                spike_times=spike_times.tolist(),
-                waveforms=waveforms,
+                unit_name=str(uid),
+                spike_times=spike_times[order].tolist(),
+                # the last dimension is for channels; all waveforms are from the one recording site
+                waveforms=waveforms[order][..., np.newaxis],
                 electrodes=electrodes_region,
             )

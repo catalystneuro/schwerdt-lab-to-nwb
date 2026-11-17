@@ -41,7 +41,7 @@ data_microinvasiveProbes_manuscript/
 
 Electrophysiological recordings were made using a unity-gain analog amplifier headstage (Neuralynx, HS-36) with an
 input range of ±1 mV at a sampling frequency of 30 (monkey P) or 32 kHz (monkey T), and bandpass filtered from 0.1 Hz
-to 7500 Hz. This system also recorded timestamps of identified task events using 8-bit event codes. The ephys and FSCV
+to 7500 Hz (monkey P) or 8000 Hz (monkey T), as given in the .ncs headers. This system also recorded timestamps of identified task events using 8-bit event codes. The ephys and FSCV
 systems were synchronized by transmitting uniform “trial-start” event codes to both systems, as detailed in previous work.
 
 EPhys files for the example session `09262024` from monkey T:
@@ -102,25 +102,16 @@ voltammetry (FSCV) data, both systems record a shared "trial-start" TTL event co
 
 ### Time alignment for raw FSCV data
 
-To synchronize raw FSCV timestamps with the Neuralynx clock, we use interpolation:
+The raw FSCV minute files run on their own clock: file k starts at 60(k-1) s and the files have no gaps. For each
+trial, `trlist.eventsfscv` lists every FSCV scan in the 60 s trial window with its FSCV-clock time (column 1) and its
+Neuralynx timestamp (column 4). The conversion fits a line to these pairs over all trials and maps every scan time
+to the session clock with it (`get_fscv_to_session_time` in `utils/utils.py`). The FSCV clock runs about 10 ppm slow
+of Neuralynx, and the fit residual is at most about one scan (0.1 s). The rows that pad the window of a trial cut off
+by the end of the FSCV recording (FSCV time 0) are left out of the fit.
 
-```python
-import numpy as np
-# original_fscv_timestamps: The raw (unaligned) timestamps from the FSCV system (in seconds, starting from 0.0, sampled at 25kHz)
-# fscv_trial_start_times: Trial start times from the FSCV system (from "tsfscv" in the `trlist` .mat file)
-# neuralynx_trial_start_times: Aligned trial start times on the Neuralynx clock (from NlxEventTTL and NlxEventTS as described above)
-
-aligned_fscv_timestamps = np.interp(
-    x=original_fscv_timestamps,
-    xp=fscv_trial_start_times,
-    fp=neuralynx_trial_start_times,
-)
-```
-
-The schematic below illustrates the alignment process. Key event markers (black squares: trial start times from the FSCV system)
-are mapped to corresponding timestamps in the Neuralynx system using interpolation (red arrows).
-
-![Alt text](time_alignment_schematic.png)
+The published version 0.261012.0921 interpolated the FSCV times against `tsfscv`, which is a Neuralynx timestamp and
+not an FSCV-clock time, so the whole series started at the first trial center (issues
+https://github.com/catalystneuro/schwerdt-lab-to-nwb/issues/30 and https://github.com/catalystneuro/schwerdt-lab-to-nwb/issues/31).
 
 This approach guarantees that behavioral, ephys, and FSCV data are temporally synchronized for downstream analysis.
 
@@ -150,3 +141,24 @@ Spike data is stored in two locations within the NWB file:
 - **Spike-sorted data from Plexon**: This data is added to the main units table under `nwbfile.units`.
 
 - **Thresholded spike data from .mat files (e.g., `cl3_session126_csc12_100_spikes.mat`)**: This data is added to a separate `Units` table within the processed ephys data module (`ecephys`). Each row in this table includes the spike times for each unit ID, with their detected waveform samples. This table is accessible via `nwbfile.processing["ecephys"].data_interfaces["thresholded_units"]`.
+
+## Changes after the reproduction findings (issues #30 and #31)
+
+- Raw ephys, eye tracking and spike times: see the clock section above. For Monkey P (2018) the .ncs timestamps count
+  from the start of the acquisition software (first record at 6800.666 s) and the spike times use the same clock, so
+  the raw series is shifted by 6800.666 s and the spike times are kept as they are.
+- Plexon units are read with neo 0.14.6, which reads the PLX timestamps as unsigned. Older neo versions placed spikes
+  2**32 ticks (4294.967 s) too early and dropped some. Spike times are sorted within each unit, and units are named by
+  their Plexon id (`ch<channel>#<unit>`, unit #0 is the unsorted unit). For Monkey P only the units of channel
+  `csc12_100` are written.
+- Thresholded spikes: waveforms are converted from microvolts to volts, spike times are sorted within each unit, and
+  spikes before the first raw sample are left out (7 in Monkey P).
+- Events: each event is stored once (the trial windows overlap) with sorted times. Codes 9, 40 and 41 are kept; codes
+  that are not in the lab's event map are stored as `TTL code <code>`. Only code 0 is skipped. For Monkey P, the
+  strobed event codes of `csc12.plx` are stored by code, since no code map is available for that session.
+- LFP: written with `conversion=1.0`, since the lab's values are already in volts. Joined trial windows keep at least
+  half a sample between timestamps. The description no longer calls it beta-band.
+- Raw FSCV: stored in nanoamperes with `conversion=1e-9`, so it reads as amperes.
+- Trial-aligned FSCV: one row for every trial with data, with `good` as given by the lab and a `trial_index` column.
+- The raw series description gives the DSP filter settings from the .ncs headers (high cut 8000 Hz in the 2024
+  sessions, 7500 Hz for Monkey P).

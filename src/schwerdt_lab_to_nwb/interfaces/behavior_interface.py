@@ -1,5 +1,4 @@
 import datetime
-from collections import defaultdict
 from pathlib import Path
 from typing import List
 from warnings import warn
@@ -14,6 +13,7 @@ from pynwb import NWBFile
 from schwerdt_lab_to_nwb.utils import (
     convert_timestamps_to_relative_timestamps,
     convert_unix_timestamps_to_datetime,
+    get_unique_sorted_event_times,
 )
 
 
@@ -188,9 +188,13 @@ class BehaviorInterface(BaseDataInterface):
         event_mapping: dict,
         metadata: dict | None = None,
         stub_test: bool = False,
+        event_codes_to_skip: tuple[int, ...] = (0,),
     ) -> None:
         """
         Adds event data to the NWB file using an AnnotatedEventsTable.
+
+        Each event is stored once, with the times of each code sorted. Codes without a name in 'event_mapping' are
+        stored as 'TTL code <code>'. Code 0 (the TTL line returning to zero between codes) is skipped by default.
 
         Parameters
         ----------
@@ -227,27 +231,27 @@ class BehaviorInterface(BaseDataInterface):
             unix_event_times = unix_event_times[:num_trials]
             event_types = event_types[:num_trials]
 
-        # Collect all event times for each event type across all trials
-        event_type_to_times = defaultdict(list)
+        # The 60 s trial windows overlap, so each event is listed once per window that contains it; keep it once
+        event_code_to_timestamps = get_unique_sorted_event_times(
+            event_times_per_trial=unix_event_times, event_codes_per_trial=event_types
+        )
 
-        for unix_event_times_per_trial, event_types_per_trial in zip(unix_event_times, event_types):
-            trial_event_times = convert_unix_timestamps_to_datetime(timestamps=unix_event_times_per_trial)
-            relative_event_times = convert_timestamps_to_relative_timestamps(
-                timestamps=trial_event_times, start_time=session_start_time
-            )
-            for event_type, relative_event_time in zip(event_types_per_trial, relative_event_times):
-                event_type_to_times[event_type].append(relative_event_time)
-
-        # Add grouped event times to the AnnotatedEventsTable
-        for event_type, times in event_type_to_times.items():
-            label = event_mapping.get(event_type, None)
-            if label is None:
-                warn(f"Event code '{event_type}' not found in the event mapping. Event will not be added.")
+        for event_code, timestamps in sorted(event_code_to_timestamps.items()):
+            if event_code in event_codes_to_skip:
                 continue
+            event_times = convert_timestamps_to_relative_timestamps(
+                timestamps=convert_unix_timestamps_to_datetime(timestamps=timestamps), start_time=session_start_time
+            )
+            label = event_mapping.get(event_code)
+            if label is None:
+                label = f"TTL code {event_code}"
+                event_description = f"The event times for code {event_code}, which is not in the lab's event map."
+            else:
+                event_description = f"The event times for code {event_code}."
             annotated_events.add_event_type(
                 label=str(label),
-                event_description=f"The event times for code '{int(event_type)}'.",
-                event_times=times,
+                event_description=event_description,
+                event_times=event_times,
                 check_ragged=False,
             )
 

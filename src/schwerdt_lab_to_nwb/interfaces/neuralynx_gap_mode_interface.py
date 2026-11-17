@@ -9,8 +9,14 @@ from neuroconv.datainterfaces.ecephys.neuralynx.neuralynxdatainterface import (
 )
 from neuroconv.utils import dict_deep_update
 from pydantic import DirectoryPath
-from spikeinterface import ConcatenateSegmentRecording, concatenate_recordings
+from spikeinterface import ConcatenateSegmentRecording
+from spikeinterface.core import NumpyRecording
 from spikeinterface.extractors import NeuralynxRecordingExtractor
+
+from schwerdt_lab_to_nwb.utils import (
+    get_neuralynx_record_samples,
+    get_neuralynx_sample_times,
+)
 
 
 class NeuralynxConcatenateSegmentRecordingInterface(BaseRecordingExtractorInterface):
@@ -76,21 +82,25 @@ class NeuralynxConcatenateSegmentRecordingInterface(BaseRecordingExtractorInterf
                 "The provided Neuralynx data does not appear to be over-segmented. Use NeuralynxRecordingInterface instead."
             )
 
-        all_seg_times = []
-        for segment_index in range(num_detected_segments):
-            segment_times = neuralynx_extractor.get_times(segment_index=segment_index)
-            # monotonicity check
-            dt = np.diff(segment_times)
-            if not np.all(dt > 0):
-                raise ValueError(f"Segment {segment_index} timestamps are not strictly increasing")
+        # The samples and their times are read from the .ncs records: neo's non-strict gap mode places the samples
+        # between groups of short records out of order, and counting at the nominal rate from the start of each
+        # segment drifts from the record timestamps by several milliseconds over the 2018 recording
+        traces = get_neuralynx_record_samples(neuralynx_extractor=neuralynx_extractor)
+        sample_times = get_neuralynx_sample_times(neuralynx_extractor=neuralynx_extractor)
+        if len(sample_times) != len(traces) or len(traces) != neuralynx_extractor.get_total_samples():
+            raise ValueError("The number of samples in the .ncs records does not match the recording.")
+        if not np.all(np.diff(sample_times) > 0):
+            raise ValueError("The .ncs record timestamps are not strictly increasing.")
 
-            all_seg_times.append(segment_times)
-
-        concat_recording = concatenate_recordings([neuralynx_extractor])
-        concat_segment_times = np.concatenate(all_seg_times)
-
-        self.recording_extractor = concat_recording
-        self.recording_extractor.set_times(concat_segment_times, segment_index=0)
+        recording = NumpyRecording(
+            traces_list=[traces],
+            sampling_frequency=neuralynx_extractor.get_sampling_frequency(),
+            channel_ids=neuralynx_extractor.channel_ids,
+        )
+        for key in neuralynx_extractor.get_property_keys():
+            recording.set_property(key, neuralynx_extractor.get_property(key))
+        recording.set_times(sample_times, segment_index=0)
+        self.recording_extractor = recording
 
         # the rest is copied from NeuralynxRecordingInterface
         property_names = self.recording_extractor.get_property_keys()
