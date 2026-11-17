@@ -80,8 +80,13 @@ class WaveformInterface(BaseDataInterface):
         nwbfile: NWBFile,
         metadata: dict | None,
         recording_site: str,
+        description_note: str | None = None,
     ) -> None:
-        """Add the thresholded spikes and their waveforms to the NWB file, one unit per unit ID in the file."""
+        """
+        Add the thresholded spikes and their waveforms to the NWB file, one unit per unit ID in the file.
+
+        'description_note' is added to the description of the units table.
+        """
         spikes_data = self.read_spikes_file()
 
         spike_times = spikes_data[:, 0] + self._starting_time
@@ -109,6 +114,9 @@ class WaveformInterface(BaseDataInterface):
             description += (
                 f" {num_dropped} spikes with times before the first sample of the raw recording were left out."
             )
+
+        if description_note:
+            description += f" {description_note}"
 
         units_table = Units(name="thresholded_units", description=description, waveform_rate=float(rate))
         units_table.add_column(name="unit_name", description="The unit ID in the lab's file.")

@@ -305,6 +305,12 @@ def session_to_nwb(
     if "LFP" not in data_interfaces:
         # pop LFP metadata if no LFP interface
         metadata["Ecephys"].pop("lfp_series")
+    spike_times_note = metadata["Ecephys"].pop("spike_times_note", None)
+    if spike_times_note is not None:
+        if "Sorting" in data_interfaces:
+            conversion_options["Sorting"]["units_description"] += f" {spike_times_note}"
+        if "Waveforms" in data_interfaces:
+            conversion_options["Waveforms"].update(description_note=spike_times_note)
     if "Recording" in data_interfaces:
         metadata["Ecephys"]["electrical_series"]["description"] += get_neuralynx_filter_description(
             recording_interface=data_interfaces["Recording"]
@@ -338,6 +344,26 @@ def session_to_nwb(
             values=brain_areas,
             ids=channel_ids,
         )
+
+        if "Sorting" in data_interfaces:
+            # Link the Plexon units to the electrode of the recording site named in the .plx file name
+            plexon_file_name = Path(plexon_file_path).stem.lower()
+            plexon_site = next(
+                (
+                    brain_area
+                    for channel_name, brain_area in ephys_channel_name_to_brain_area.items()
+                    if channel_name.lower() in plexon_file_name
+                ),
+                None,
+            )
+            if plexon_site in brain_areas:
+                num_units = len(data_interfaces["Sorting"].sorting_extractor.unit_ids)
+                conversion_options["Sorting"].update(
+                    unit_electrode_indices=[[brain_areas.index(plexon_site)]] * num_units
+                )
+                conversion_options["Sorting"]["units_description"] += f" The units are from site {plexon_site}."
+            else:
+                warn(f"No recording site found for the Plexon file '{plexon_file_name}'; the units have no electrode.")
 
     subject_id = subject_metadata["subject_id"].replace(" ", "-")
     nwbfile_path = nwb_folder_path / f"sub-{subject_id}_ses-{session_id}.nwb"

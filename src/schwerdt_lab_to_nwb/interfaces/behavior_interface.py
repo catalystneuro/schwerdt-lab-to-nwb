@@ -9,12 +9,15 @@ from neuroconv.tools import get_module
 from pydantic import FilePath
 from pymatreader import read_mat
 from pynwb import NWBFile
+from pynwb.epoch import TimeIntervals
 
 from schwerdt_lab_to_nwb.utils import (
     convert_timestamps_to_relative_timestamps,
     convert_unix_timestamps_to_datetime,
     get_unique_sorted_event_times,
 )
+
+TRIAL_START_CODE = 128  # TTL code of the trial start event
 
 
 class BehaviorInterface(BaseDataInterface):
@@ -166,7 +169,31 @@ class BehaviorInterface(BaseDataInterface):
                 warn("No 'bipolar_lfp_series' found in 'FilteredEphys' module to link to trials.")
 
         trial_types = trials_data["type"][:num_trials]
-        nwbfile.add_trial_column(name="midpoint_time", description="The midpoint time of the trial in seconds.")
+        description = (
+            "Trials of the trial list. Each trial is stored as a 60 s window around its start: start_time and stop_time "
+            f"are 30 s before and after the trial start event (code {TRIAL_START_CODE}), so consecutive windows overlap "
+            "and are not the first and last event of the trial. midpoint_time is the trial start. The task events are "
+            "in the events table."
+        )
+        trial_start_event_times = self.get_relative_event_times(
+            trials_data=trials_data, num_trials=num_trials, session_start_time=session_start_time
+        ).get(TRIAL_START_CODE, [])
+        times_without_row = [
+            event_time
+            for event_time in trial_start_event_times
+            if np.abs(np.asarray(relative_trial_midpoint_times) - event_time).min() > 0.005
+        ]
+        if times_without_row:
+            times = ", ".join(f"{event_time:.2f}" for event_time in times_without_row)
+            description += (
+                f" {len(times_without_row)} of the {len(trial_start_event_times)} trial start events have no row "
+                f"(at {times} s): they are not in the trial list and appear only inside the window of a listed trial."
+            )
+        nwbfile.trials = TimeIntervals(name="trials", description=description)
+        nwbfile.add_trial_column(
+            name="midpoint_time",
+            description=f"Time of the trial start event (code {TRIAL_START_CODE}), the centre of the 60 s window.",
+        )
         for start_time, stop_time, midpoint_time, tag in zip(
             relative_trial_start_times,
             relative_trial_stop_times,
@@ -181,6 +208,22 @@ class BehaviorInterface(BaseDataInterface):
                 timeseries=timeseries,
                 check_ragged=False,
             )
+
+    def get_relative_event_times(
+        self, trials_data: dict, num_trials: int, session_start_time: datetime.datetime | None
+    ) -> dict[int, list[float]]:
+        """Event code -> sorted event times in seconds from the session start, each event once."""
+        # The 60 s trial windows overlap, so each event is listed once per window that contains it; keep it once
+        event_code_to_timestamps = get_unique_sorted_event_times(
+            event_times_per_trial=trials_data["NlxEventTS"][:num_trials],
+            event_codes_per_trial=trials_data["NlxEventTTL"][:num_trials],
+        )
+        return {
+            event_code: convert_timestamps_to_relative_timestamps(
+                timestamps=convert_unix_timestamps_to_datetime(timestamps=timestamps), start_time=session_start_time
+            )
+            for event_code, timestamps in sorted(event_code_to_timestamps.items())
+        }
 
     def add_events_to_nwbfile(
         self,
@@ -223,31 +266,26 @@ class BehaviorInterface(BaseDataInterface):
             raise KeyError(
                 "The trials data must contain 'NlxEventTS' and 'NlxEventTTL' keys for event timestamps and types."
             )
-        unix_event_times = trials_data["NlxEventTS"]
-        event_types = trials_data["NlxEventTTL"]  # this is per trial
+        num_trials = len(trials_data["NlxEventTS"])
         if stub_test:
             # Limit the number of trials for stub testing
-            num_trials = min(len(trials_data["NlxEventTS"]), 100)
-            unix_event_times = unix_event_times[:num_trials]
-            event_types = event_types[:num_trials]
-
-        # The 60 s trial windows overlap, so each event is listed once per window that contains it; keep it once
-        event_code_to_timestamps = get_unique_sorted_event_times(
-            event_times_per_trial=unix_event_times, event_codes_per_trial=event_types
+            num_trials = min(num_trials, 100)
+        event_code_to_times = self.get_relative_event_times(
+            trials_data=trials_data, num_trials=num_trials, session_start_time=session_start_time
         )
+        event_descriptions = metadata["Events"].get("event_descriptions", dict())
 
-        for event_code, timestamps in sorted(event_code_to_timestamps.items()):
+        for event_code, event_times in event_code_to_times.items():
             if event_code in event_codes_to_skip:
                 continue
-            event_times = convert_timestamps_to_relative_timestamps(
-                timestamps=convert_unix_timestamps_to_datetime(timestamps=timestamps), start_time=session_start_time
-            )
             label = event_mapping.get(event_code)
             if label is None:
                 label = f"TTL code {event_code}"
                 event_description = f"The event times for code {event_code}, which is not in the lab's event map."
             else:
                 event_description = f"The event times for code {event_code}."
+            if event_code in event_descriptions:
+                event_description += f" {event_descriptions[event_code]}"
             annotated_events.add_event_type(
                 label=str(label),
                 event_description=event_description,

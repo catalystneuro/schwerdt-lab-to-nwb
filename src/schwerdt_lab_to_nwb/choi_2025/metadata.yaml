@@ -45,6 +45,8 @@ Ecephys:
   electrical_series:
     name: electrical_series
     description: The raw acquisition traces from Neuralynx (Digital Lynx SX) acquired with a unity-gain headstage (Neuralynx, HS-36, ±1 mV input range, at 30 or 32 kHz).
+  # Added to the descriptions of the units tables
+  spike_times_note: "Almost no spikes fall in a window of about 10 ms in each 100 ms FSCV cycle, around the scan artifact. Whether spikes there were removed or not detected is not documented."
   lfp_series:
     name: bipolar_lfp_series
     description: "Bipolar LFP at 1 kHz, in volts. The source data are 60 s windows around each trial, joined here into one series with NaN in the gaps. The preprocessing (filters, line-noise removal) is not documented."
@@ -74,7 +76,11 @@ FSCV:
 Events:
   AnnotatedEventsTable:
     name: events_table
-    description: "Task events from the 8-bit Neuralynx event codes, named by the event map of the trial list. Each event is stored once, in time order. Codes missing from the event map are named 'TTL code <code>'."
+    description: "Task events from the 8-bit Neuralynx event codes, named by the event map of the trial list. Each event is stored once, in time order. Codes missing from the event map are named 'TTL code <code>'. The meaning of the reward condition codes is inferred from the reward events of the session."
+  # Added to the description of the event with this code
+  event_descriptions:
+    40: "Reward condition of the trial: every rewarded trial with this code got the small reward (code 100)."
+    41: "Reward condition of the trial: every rewarded trial with this code got the big reward (code 101)."
 
 # Contains metadata for trial-aligned FSCV data
 TrialAlignedFSCV:
@@ -85,7 +91,7 @@ TrialAlignedFSCV:
     - name: good
       description: "Quality flag of the trial, from the source data."
     - name: da
-      description: "PCA-extracted dopamine component. Units unknown."
+      description: "PCA-extracted dopamine component. Units unknown. Some samples are NaN in the source data; the reason is not documented."
     - name: ph
       description: "PCA-extracted pH component. Units unknown."
     - name: m

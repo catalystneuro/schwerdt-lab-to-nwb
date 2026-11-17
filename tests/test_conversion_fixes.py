@@ -233,3 +233,40 @@ def test_units_tables_have_the_sample_period_as_resolution(tmp_path, monkeypatch
         read_nwbfile = io.read()
         assert read_nwbfile.units.resolution == 1 / 30000.0
         assert read_nwbfile.processing["ecephys"]["thresholded_units"].resolution == 1 / 30000.0
+
+
+def test_trials_and_events_describe_windows_missing_trials_and_reward_codes(monkeypatch):
+    from schwerdt_lab_to_nwb.interfaces import BehaviorInterface
+
+    # Two listed trials; the window of the first also holds the start of an earlier trial that is not in the list
+    trial_starts = SESSION_START_EPOCH + np.array([100.0, 115.0])
+    earlier_start = SESSION_START_EPOCH + 85.0
+    trials_data = dict(
+        ts=trial_starts,
+        type=["initial cue display", "initial cue display"],
+        NlxEventTS=[
+            np.array([earlier_start, trial_starts[0], trial_starts[0] + 0.001, trial_starts[1]]),
+            np.array([trial_starts[0], trial_starts[0] + 0.001, trial_starts[1]]),
+        ],
+        NlxEventTTL=[np.array([128, 128, 41, 128]), np.array([128, 41, 128])],
+    )
+    interface = BehaviorInterface.__new__(BehaviorInterface)
+    monkeypatch.setattr(interface, "read_data", lambda: trials_data)
+    interface._aligned_start_times = None
+
+    nwbfile = mock_NWBFile(session_start_time=SESSION_START)
+    metadata = dict(
+        NWBFile=dict(session_start_time=SESSION_START),
+        Events=dict(
+            AnnotatedEventsTable=dict(name="events_table", description="Task events."),
+            event_descriptions={41: "Every rewarded trial with this code got the big reward."},
+        ),
+    )
+    interface.add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, event_mapping={128: "start", 41: "condition 1"})
+
+    assert len(nwbfile.trials) == 2
+    assert "consecutive windows overlap" in nwbfile.trials.description
+    assert "1 of the 3 trial start events have no row (at 85.00 s)" in nwbfile.trials.description
+    events = nwbfile.processing["events"]["events_table"].to_dataframe().set_index("label")
+    assert events.loc["condition 1", "event_description"].endswith("got the big reward.")
+    assert events.loc["start", "event_description"] == "The event times for code 128."
