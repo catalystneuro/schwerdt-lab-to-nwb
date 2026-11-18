@@ -119,5 +119,5 @@ Behavior:
         description: Neuralynx recording
       SpatialSeries:
         name: eye_tracking_series
-        description: "Uncalibrated eye position signal (x, y) in volts, recorded with Neuralynx (Digital Lynx SX). x is channel CSC146 and y is channel CSC145, as in the session notes; the channel list of the trial list names them the other way round."
+        description: "Uncalibrated eye position signal (x, y) in volts, recorded with Neuralynx (Digital Lynx SX). x is channel CSC146 and y is channel CSC145, as in the session notes."
         unit: volts

@@ -226,9 +226,16 @@ def session_to_nwb(
         channels = ", ".join(plexon_channel_names) if plexon_channel_names else "all channels"
         units_description = (
             f"Spike-sorted units from Plexon Offline Sorter ({Path(plexon_file_path).name}, {channels}). "
-            "Units are named by their Plexon id 'ch<channel>#<unit>'; unit #0 holds the spikes Plexon left unsorted. "
-            "Spike times are sorted within each unit."
+            "Units are named by their Plexon id 'ch<channel>#<unit>'. Spike times are sorted within each unit."
         )
+        unit_names = plexon_interface.sorting_extractor.get_property("unit_name")
+        if any(str(unit_name).endswith("#0") for unit_name in unit_names):
+            units_description += " Unit #0 holds the spikes that are not assigned to a sorted unit."
+            if spikes_file_path is not None:
+                # Checked on Monkey P: ch33#0 has the spike times of the thresholded units -1 and 0 together
+                units_description += (
+                    " These are the spikes of units -1 (poor quality) and 0 (unsorted) of the thresholded units table."
+                )
         conversion_options.update(dict(Sorting=dict(stub_test=stub_test, units_description=units_description)))
         if behavior_trlist_file_path is None:
             data_interfaces.update(dict(PlexonEvents=PlexonEventsInterface(file_path=plexon_file_path)))

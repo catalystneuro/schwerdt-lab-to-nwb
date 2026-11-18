@@ -299,9 +299,9 @@ def get_sorted_plexon_sorting(sorting_extractor, channel_names: list[str] | None
     """
     Build a sorting with the units of the given Plexon channels and their spike times in time order.
 
-    Plexon Offline Sorter files can store spikes out of time order (the unsorted unit #0 of Monkey P's csc12.plx goes
-    back in time 4 times). The units are named by their Plexon id ('ch<channel>#<unit>', where unit #0 holds the
-    spikes Plexon left unsorted).
+    Plexon Offline Sorter files can store spikes out of time order (unit #0 of Monkey P's csc12.plx goes back in time
+    4 times). The units are named by their Plexon id ('ch<channel>#<unit>', where unit #0 holds the spikes that are
+    not assigned to a sorted unit; in Monkey P these are units -1 and 0 of the thresholded spikes file together).
 
     Parameters
     ----------

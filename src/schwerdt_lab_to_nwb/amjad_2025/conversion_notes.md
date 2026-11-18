@@ -150,8 +150,10 @@ Spike data is stored in two locations within the NWB file:
   the raw series is shifted by 6800.666 s and the spike times are kept as they are.
 - Plexon units are read with neo 0.14.6, which reads the PLX timestamps as unsigned. Older neo versions placed spikes
   2**32 ticks (4294.967 s) too early and dropped some. Spike times are sorted within each unit, and units are named by
-  their Plexon id (`ch<channel>#<unit>`, unit #0 is the unsorted unit). For Monkey P only the units of channel
-  `csc12_100` are written.
+  their Plexon id (`ch<channel>#<unit>`). Unit #0 holds the spikes that are not assigned to a sorted unit: in
+  Monkey P, `ch33#0` has the same spike times as units -1 (poor quality) and 0 (unsorted) of the thresholded spikes
+  file together (10885 + 19880 = 30765 in the source), and `ch33#1` the same as unit 1. For Monkey P only the units of
+  channel `csc12_100` are written.
 - Thresholded spikes: waveforms are converted from microvolts to volts, spike times are sorted within each unit, and
   spikes before the first raw sample are left out (7 in Monkey P).
 - Events: each event is stored once (the trial windows overlap) with sorted times. Codes 9, 40 and 41 are kept; codes

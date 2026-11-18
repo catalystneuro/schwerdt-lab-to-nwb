@@ -97,7 +97,7 @@ def test_plexon_units_are_selected_by_channel_and_sorted():
 
 
 def test_plexon_spikes_before_the_recording_are_dropped():
-    # Monkey P: the recording starts at 6800.666 s, and 7 spikes of the unsorted unit have times below 0.02 s,
+    # Monkey P: the recording starts at 6800.666 s, and 7 spikes of unit #0 have times below 0.02 s,
     # 3 of them repeated
     fs = 30000.0
     spike_trains = {
